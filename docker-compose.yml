@@ -1,15 +1,14 @@
-version: "3.9"
-
 services:
-  frontend:
-    build:
-      context: ./app/next-ui
-      dockerfile: Dockerfile
-    container_name: opencern-frontend
+  ui:
+    image: ghcr.io/ceoatnorthstar/ui:latest
+    container_name: opencern-ui
     ports:
       - "127.0.0.1:3000:3000"
-    env_file:
-      - ./app/next-ui/.env.local
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
@@ -19,9 +18,7 @@ services:
       start_period: 15s
 
   api:
-    build:
-      context: .
-      dockerfile: containers/api/Dockerfile
+    image: ghcr.io/ceoatnorthstar/api:latest
     container_name: opencern-api
     ports:
       - "127.0.0.1:8080:8080"
@@ -35,22 +32,8 @@ services:
       retries: 3
       start_period: 10s
 
-  streamer:
-    build:
-      context: ./containers/streaming
-      dockerfile: Dockerfile
-    container_name: opencern-streamer
-    ports:
-      - "127.0.0.1:9001:9001"
-      - "127.0.0.1:9002:9002"
-    volumes:
-      - ${HOME}/opencern-datasets/processed:/home/appuser/opencern-datasets/processed:ro
-    restart: unless-stopped
-
   xrootd:
-    build:
-      context: ./containers/xrootd
-      dockerfile: Dockerfile
+    image: ghcr.io/ceoatnorthstar/xrootd:latest
     container_name: opencern-xrootd
     ports:
       - "127.0.0.1:8081:8081"
@@ -64,3 +47,25 @@ services:
       retries: 3
       start_period: 10s
 
+  streamer:
+    image: ghcr.io/ceoatnorthstar/streamer:latest
+    container_name: opencern-streamer
+    ports:
+      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:9002:9002"
+    volumes:
+      - ${HOME}/opencern-datasets/processed:/home/appuser/opencern-datasets/processed:ro
+    restart: unless-stopped
+
+  quantum:
+    image: ghcr.io/ceoatnorthstar/quantum:latest
+    container_name: opencern-quantum
+    ports:
+      - "127.0.0.1:8082:8082"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8082/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
