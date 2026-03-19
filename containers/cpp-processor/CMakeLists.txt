@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(opencern-processor VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+# OpenCERN C++ Processor CMake (autotest)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 

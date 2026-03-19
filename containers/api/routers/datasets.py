@@ -11,14 +11,14 @@ router = APIRouter()
 
 
 @router.get("/datasets")
-async def get_datasets(experiment: str = "ALICE", page: int = 1, size: int = 20):
+async def get_datasets(experiment: str = "ALICE", page: int = 1, size: int = 20, file_type: str = "root"):
     """
     Fetch the full dataset catalog for an experiment with pagination.
 
-    First request fetches all pages from CERN OpenData API (may take a few seconds).
-    Subsequent requests are instant (5-min TTL cache).
+    Args:
+        file_type: "root" (default) returns only .root files. "all" returns all file types.
 
     Returns: { datasets: [...], total: N, page: P, pages: T }
     """
     async with httpx.AsyncClient(verify=False, follow_redirects=True, timeout=30) as client:
-        return await fetch_datasets(client, experiment, page, size)
+        return await fetch_datasets(client, experiment, page, size, file_type=file_type)

@@ -1,0 +1,402 @@
+/* WorkspacePage — VS Code-inspired IDE layout */
+
+.workspace {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--oc-bg-app);
+  color: var(--oc-text-primary);
+  font-family: var(--oc-font-sans);
+}
+
+/* ── Explorer Sidebar ─────────────────────────────────── */
+
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: var(--oc-bg-sidebar);
+  border-right: 1px solid var(--oc-border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--oc-space-lg);
+  height: 36px;
+  min-height: 36px;
+  font-size: var(--oc-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--oc-text-secondary);
+}
+
+.sidebarTree {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--oc-space-xs) 0;
+}
+
+.treeFolder {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-sm);
+  padding: 3px var(--oc-space-lg);
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-secondary);
+  cursor: default;
+}
+
+.treeFolder svg {
+  flex-shrink: 0;
+  color: var(--oc-text-muted);
+}
+
+.treeFolderName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.treeItem {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-sm);
+  padding: 3px var(--oc-space-lg) 3px 36px;
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-secondary);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background var(--oc-transition-fast), color var(--oc-transition-fast);
+}
+
+.treeItem:hover {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+}
+
+.treeItem svg {
+  flex-shrink: 0;
+}
+
+.treeItemActive {
+  border-left-color: var(--oc-blue-light);
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+}
+
+.treeItemName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jsonIcon {
+  color: #E8AB53;
+}
+
+.emptyExplorer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--oc-space-sm);
+  padding: var(--oc-space-2xl) var(--oc-space-lg);
+  text-align: center;
+}
+
+.emptyExplorer svg {
+  color: var(--oc-text-muted);
+  opacity: 0.5;
+}
+
+.emptyExplorerText {
+  font-size: var(--oc-text-xs);
+  color: var(--oc-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Editor Area ──────────────────────────────────────── */
+
+.editorArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Tab bar */
+
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  height: 36px;
+  min-height: 36px;
+  background: var(--oc-bg-card);
+  border-bottom: 1px solid var(--oc-border-subtle);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tabBar::-webkit-scrollbar {
+  height: 0;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-sm);
+  padding: 0 var(--oc-space-md);
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-secondary);
+  border-right: 1px solid var(--oc-border-subtle);
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: color var(--oc-transition-fast);
+}
+
+.tab:hover {
+  color: var(--oc-text-primary);
+}
+
+.tabActive {
+  color: var(--oc-text-primary);
+  background: var(--oc-bg-app);
+}
+
+.tabActive::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--oc-bg-app);
+}
+
+.tab svg {
+  flex-shrink: 0;
+}
+
+.tabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--oc-radius-sm);
+  color: var(--oc-text-muted);
+  opacity: 0;
+  transition: opacity var(--oc-transition-fast), background var(--oc-transition-fast);
+}
+
+.tab:hover .tabClose,
+.tabActive .tabClose {
+  opacity: 1;
+}
+
+.tabClose:hover {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+}
+
+/* Breadcrumb + actions bar */
+
+.breadcrumbBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--oc-space-lg);
+  height: 28px;
+  min-height: 28px;
+  background: var(--oc-bg-app);
+  border-bottom: 1px solid var(--oc-border-subtle);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-xs);
+  font-size: var(--oc-text-xs);
+  color: var(--oc-text-muted);
+}
+
+.breadcrumb span {
+  color: var(--oc-text-secondary);
+}
+
+.breadcrumb svg {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-sm);
+}
+
+.btnSave {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-xs);
+  padding: 2px 10px;
+  font-size: var(--oc-text-xs);
+  font-weight: 500;
+  color: #fff;
+  background: var(--oc-blue-light);
+  border: none;
+  border-radius: var(--oc-radius-sm);
+  cursor: pointer;
+  transition: opacity var(--oc-transition-fast);
+}
+
+.btnSave:hover {
+  opacity: 0.85;
+}
+
+.btnDelete {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-xs);
+  padding: 2px 10px;
+  font-size: var(--oc-text-xs);
+  font-weight: 500;
+  color: var(--oc-error);
+  background: transparent;
+  border: 1px solid var(--oc-error);
+  border-radius: var(--oc-radius-sm);
+  cursor: pointer;
+  transition: background var(--oc-transition-fast);
+}
+
+.btnDelete:hover {
+  background: var(--oc-error-dim);
+}
+
+/* Editor body */
+
+.editorBody {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* Status bar */
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 var(--oc-space-md);
+  background: #0066B8;
+  color: #fff;
+  font-size: var(--oc-text-xs);
+  user-select: none;
+}
+
+.statusLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-lg);
+}
+
+.statusRight {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-lg);
+}
+
+.statusPagination {
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-xs);
+}
+
+.statusBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  font-size: var(--oc-text-xs);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background var(--oc-transition-fast);
+}
+
+.statusBtn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.statusBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Empty & Loading States ───────────────────────────── */
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--oc-space-lg);
+  color: var(--oc-text-muted);
+  animation: oc-fadeIn 300ms ease;
+}
+
+.emptyLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--oc-radius-lg);
+  background: var(--oc-bg-elevated);
+  color: var(--oc-text-muted);
+}
+
+.emptyText {
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-muted);
+}
+
+.loadingState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--oc-space-md);
+  color: var(--oc-text-muted);
+  animation: oc-fadeIn 200ms ease;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--oc-border);
+  border-top-color: var(--oc-blue-light);
+  border-radius: 50%;
+  animation: oc-spin 0.8s linear infinite;
+}
+
+.loadingText {
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-muted);
+}

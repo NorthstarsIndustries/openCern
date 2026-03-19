@@ -1,0 +1,148 @@
+/* OpenCERN Design System — CERN-Inspired Dark Theme */
+
+:root {
+  /* Primary */
+  --oc-blue: #0033A0;
+  --oc-blue-light: #3B82F6;
+  --oc-blue-dim: rgba(59, 130, 246, 0.12);
+  --oc-blue-glow: rgba(59, 130, 246, 0.25);
+
+  /* Surface Hierarchy */
+  --oc-bg-app: #08090D;
+  --oc-bg-sidebar: #0C0D12;
+  --oc-bg-card: #111218;
+  --oc-bg-elevated: #16171F;
+  --oc-bg-hover: #1A1C25;
+  --oc-bg-active: #1E2029;
+  --oc-bg-input: #0E0F14;
+
+  /* Borders */
+  --oc-border-subtle: #1A1C24;
+  --oc-border: #22242E;
+  --oc-border-strong: #2E3040;
+  --oc-border-focus: #3B82F6;
+
+  /* Text */
+  --oc-text-primary: #ECEDF0;
+  --oc-text-secondary: #8B8D9A;
+  --oc-text-muted: #5C5E6B;
+  --oc-text-on-blue: #FFFFFF;
+
+  /* Status */
+  --oc-success: #10B981;
+  --oc-success-dim: rgba(16, 185, 129, 0.12);
+  --oc-warning: #F59E0B;
+  --oc-warning-dim: rgba(245, 158, 11, 0.12);
+  --oc-error: #EF4444;
+  --oc-error-dim: rgba(239, 68, 68, 0.12);
+  --oc-info: #3B82F6;
+  --oc-info-dim: rgba(59, 130, 246, 0.12);
+
+  /* Spacing */
+  --oc-space-xs: 4px;
+  --oc-space-sm: 8px;
+  --oc-space-md: 12px;
+  --oc-space-lg: 16px;
+  --oc-space-xl: 24px;
+  --oc-space-2xl: 32px;
+  --oc-space-3xl: 48px;
+
+  /* Radius */
+  --oc-radius-sm: 4px;
+  --oc-radius-md: 6px;
+  --oc-radius-lg: 8px;
+  --oc-radius-xl: 12px;
+  --oc-radius-full: 9999px;
+
+  /* Typography */
+  --oc-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --oc-font-mono: var(--font-geist-mono), 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  --oc-text-xs: 11px;
+  --oc-text-sm: 12px;
+  --oc-text-base: 13px;
+  --oc-text-md: 14px;
+  --oc-text-lg: 16px;
+  --oc-text-xl: 20px;
+  --oc-text-2xl: 24px;
+
+  /* Shadows */
+  --oc-shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --oc-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --oc-shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --oc-shadow-xl: 0 16px 48px rgba(0,0,0,0.6);
+
+  /* Transitions */
+  --oc-transition-fast: 100ms ease;
+  --oc-transition: 150ms ease;
+  --oc-transition-slow: 250ms ease;
+
+  /* Layout */
+  --oc-sidebar-collapsed: 56px;
+  --oc-sidebar-expanded: 240px;
+  --oc-header-height: 48px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2A2C36; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3A3C48; }
+
+/* Global resets */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--oc-bg-app);
+  color: var(--oc-text-primary);
+  font-family: var(--oc-font-sans);
+  font-size: var(--oc-text-base);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  overflow: hidden;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Animations */
+@keyframes oc-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes oc-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes oc-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes oc-slideInRight {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes oc-slideInUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes oc-slideInDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes oc-skeleton {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.oc-spin { animation: oc-spin 1s linear infinite; }
+.oc-pulse { animation: oc-pulse 2s ease-in-out infinite; }
+.oc-fade-in { animation: oc-fadeIn 200ms ease; }
+.oc-slide-in-right { animation: oc-slideInRight 250ms ease; }
+.oc-slide-in-up { animation: oc-slideInUp 200ms ease; }
+
+.oc-skeleton {
+  background: linear-gradient(90deg, var(--oc-bg-card) 25%, var(--oc-bg-elevated) 50%, var(--oc-bg-card) 75%);
+  background-size: 400px 100%;
+  animation: oc-skeleton 1.4s ease infinite;
+  border-radius: var(--oc-radius-md);
+}

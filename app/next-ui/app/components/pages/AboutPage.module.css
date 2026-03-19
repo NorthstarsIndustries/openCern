@@ -1,0 +1,160 @@
+/* AboutPage — Project information & credits */
+
+/* ── Layout ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  animation: oc-fadeIn 200ms ease;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--oc-space-xl) var(--oc-space-2xl) var(--oc-space-3xl);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ── Card ── */
+.card {
+  width: 100%;
+  max-width: 640px;
+  background: var(--oc-bg-card);
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-xl);
+  padding: 36px 32px;
+  margin-top: var(--oc-space-xl);
+}
+
+/* ── Brand ── */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logo {
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: var(--oc-text-2xl);
+  font-weight: 700;
+  color: var(--oc-text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: var(--oc-text-md);
+  color: var(--oc-text-secondary);
+  margin: 4px 0 0;
+}
+
+.versionBadge {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: var(--oc-text-xs);
+  font-weight: 500;
+  font-family: var(--oc-font-mono);
+  color: var(--oc-blue-light);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 12px;
+  border-radius: var(--oc-radius-full);
+}
+
+/* ── Description ── */
+.description {
+  font-size: var(--oc-text-base);
+  color: var(--oc-text-secondary);
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: var(--oc-border-subtle);
+  margin: 0 0 24px;
+  border: none;
+}
+
+/* ── Tech Stack ── */
+.sectionLabel {
+  font-size: var(--oc-text-xs);
+  font-weight: 600;
+  color: var(--oc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 10px;
+}
+
+.techGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.techBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: var(--oc-text-xs);
+  font-weight: 500;
+  color: var(--oc-text-secondary);
+  background: var(--oc-bg-elevated);
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-full);
+}
+
+.techDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Links ── */
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  color: var(--oc-text-secondary);
+  background: transparent;
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-md);
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+
+.link:hover {
+  color: var(--oc-text-primary);
+  background: var(--oc-bg-hover);
+  border-color: var(--oc-border);
+}
+
+/* ── Copyright ── */
+.copyright {
+  font-size: var(--oc-text-xs);
+  color: var(--oc-text-muted);
+  text-align: center;
+  margin: 0;
+}

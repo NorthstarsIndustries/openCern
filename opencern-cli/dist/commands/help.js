@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 OpenCERN Contributors
+import { registry } from './registry.js';
 export function getHelpText() {
-    return [
+    const lines = [
         '',
         '     ___                    ____ _____ ____  _   _',
         '    / _ \\ _ __   ___ _ __  / ___| ____|  _ \\| \\ | |',
@@ -12,59 +13,21 @@ export function getHelpText() {
         '',
         '  AI-powered particle physics analysis',
         '  ────────────────────────────────────────────────────',
-        '',
-        '  Data',
-        '    /download [query]        Search and download CERN Open Data',
-        '    /process [--file path]   Process ROOT files with C++ engine',
-        '    /open [file]             Inspect ROOT or JSON files',
-        '',
-        '  Analysis',
-        '    /ask [question]          AI analysis with tool execution',
-        '    /opask [file]            Split view: file + AI analysis',
-        '    /quantum [classify]      Quantum event classification (VQC)',
-        '    /viz [--file path]       Launch 3D particle visualization',
-        '',
-        '  AI & Models',
-        '    /models                  List available Claude models',
-        '    /model [id]              Switch active model',
-        '    /usage                   Show token usage for this session',
-        '',
-        '  System',
-        '    /status                  Container and service health',
-        '    /config                  Configure API keys and settings',
-        '    /keys                    Manage API keys (Anthropic, IBM Quantum)',
-        '    /login                   Authenticate with OpenCERN',
-        '    /logout                  Sign out',
-        '    /doctor                  Diagnose and fix system issues',
-        '    /update                  Update CLI and Docker images',
-        '',
-        '  Session',
-        '    /history                 Show command history',
-        '    /clear                   Clear the screen',
-        '    /help                    Show this help',
-        '    /exit                    Exit',
-        '',
-        '  Keyboard Shortcuts',
-        '  ────────────────────────────────────────────────────',
-        '    Ctrl+D         Exit',
-        '    Ctrl+L         Clear screen',
-        '    Tab            Autocomplete',
-        '    Up/Down        Navigate command history',
-        '    Esc            Cancel / dismiss',
-        '    /              Open command palette',
-        '    Enter          Approve tool execution',
-        '',
-        '  Agentic Mode',
-        '  ────────────────────────────────────────────────────',
-        '    When the AI uses tools (Python, bash, CLI), you will',
-        '    see a tool approval card. Press Enter to approve or',
-        '    Esc to deny. Tool output is fed back to the AI for',
-        '    multi-step reasoning.',
-        '',
-        '  docs   https://docs.opencern.io',
-        '  repo   https://github.com/opencern/opencern',
-        '',
     ];
+    for (const category of registry.getCategories()) {
+        const cmds = registry.getByCategory(category);
+        if (cmds.length === 0)
+            continue;
+        lines.push('');
+        lines.push(`  ${registry.getCategoryLabel(category)}`);
+        for (const cmd of cmds) {
+            const usage = cmd.usage || cmd.name;
+            const shortcut = cmd.shortcut ? `  (${cmd.shortcut})` : '';
+            lines.push(`    ${usage.padEnd(32)} ${cmd.description}${shortcut}`);
+        }
+    }
+    lines.push('', '  Keyboard Shortcuts', '  ────────────────────────────────────────────────────', '    Ctrl+D         Exit', '    Ctrl+L         Clear screen', '    Ctrl+K         Command palette', '    ?              Show all keyboard shortcuts', '    Tab            Autocomplete', '    Up/Down        Navigate command history', '    Esc            Cancel / dismiss', '    Enter          Approve tool execution', '', '  Agentic Mode', '  ────────────────────────────────────────────────────', '    When the AI uses tools (Python, bash, CLI), you will', '    see a tool approval card. Press Enter to approve or', '    Esc to deny. Tool output is fed back to the AI for', '    multi-step reasoning.', '', '  docs   https://docs.opencern.io', '  repo   https://github.com/opencern/opencern', '');
+    return lines;
 }
 export function getBannerText() {
     return [

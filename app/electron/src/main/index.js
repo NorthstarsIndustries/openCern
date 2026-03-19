@@ -58,29 +58,6 @@ if (!gotTheLock) {
     return { ...process.env, PATH: DOCKER_PATH };
   }
 
-  function composePath() {
-    return app.isPackaged ? process.resourcesPath : path.resolve(__dirname, '../../../../');
-  }
-
-  function runDocker(args) {
-    return new Promise((resolve) => {
-      const cmd = `docker compose -p opencern ${args}`;
-      console.log(`[Docker] ${cmd}`);
-      exec(cmd, { cwd: composePath(), env: dockerEnv(), timeout: 300000 }, (err, stdout, stderr) => {
-        if (stdout) console.log(`[Docker] ${stdout.trim()}`);
-        if (stderr) console.log(`[Docker] ${stderr.trim()}`);
-        if (err)    console.error(`[Docker] Error: ${err.message}`);
-        resolve(!err);
-      });
-    });
-  }
-
-  async function isDockerRunning() {
-    return new Promise((resolve) => {
-      exec('docker info', { env: dockerEnv(), timeout: 10000 }, (err) => resolve(!err));
-    });
-  }
-
   async function waitForPort(port, timeoutMs = 90000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
@@ -124,97 +101,116 @@ if (!gotTheLock) {
 
   // ── Main ──
 
+  let dockerManager;
+
   async function createWindow() {
     console.log("=== OpenCERN ===");
     console.log("Packaged:", app.isPackaged);
-    console.log("Compose dir:", composePath());
 
-    // 1. Docker check
-    const dockerOk = await isDockerRunning();
-    console.log("Docker:", dockerOk ? "OK" : "NOT RUNNING");
-    if (!dockerOk) {
+    // Clear stale Clerk/auth cookies & storage that can freeze the UI
+    const ses = electron.session.defaultSession;
+    try {
+      await ses.clearStorageData({ storages: ['cookies', 'localstorage', 'sessionstorage'] });
+      console.log("Cleared cached session data");
+    } catch (e) {
+      console.warn("Could not clear session data:", e.message);
+    }
+
+    // 1. Create DockerManager (auto-patches env for Colima/broken creds)
+    dockerManager = new DockerManager(dockerEnv());
+
+    // 2. Docker daemon check
+    try {
+      await dockerManager._exec('docker info');
+      console.log("Docker: OK");
+    } catch {
       dialog.showErrorBox("Docker Required",
-        "Docker Desktop is not running.\n\nPlease start Docker Desktop and try again.");
+        "Docker is not running.\n\nPlease start Docker (Docker Desktop, Colima, OrbStack, etc.) and try again.");
       app.quit();
       return;
     }
 
-    // 2. Splash
+    // 3. Splash
     const splash = showSplash();
-    await new Promise(r => setTimeout(r, 5000)); // Let video play
+    const splashMsg = (msg) => {
+      splash.webContents.executeJavaScript(
+        `document.getElementById('s').innerText = ${JSON.stringify(msg)}`
+      ).catch(() => {});
+    };
 
-    // 3. Docker Auto-Pull & Update Check
-    const dockerManager = new DockerManager(dockerEnv(), composePath());
+    // 4. Check for updates first (fast, non-blocking)
     const imagesPresent = await dockerManager.areImagesPresent();
 
     if (!imagesPresent) {
-      console.log("First launch: missing images. Pulling...");
-      await splash.webContents.executeJavaScript(`document.getElementById('s').innerText = 'Downloading OpenCERN Engine... This may take a few minutes.'`);
+      // First launch — must download all images
+      console.log("First launch: downloading images...");
+      splashMsg('Downloading OpenCERN Engine… This may take a few minutes.');
       try {
         await dockerManager.pullImages((msg) => {
-          splash.webContents.executeJavaScript(`document.getElementById('s').innerText = ${JSON.stringify('Downloading: ' + msg)}`).catch(()=>{});
+          console.log(`[Pull] ${msg}`);
+          splashMsg(msg);
         });
       } catch (err) {
-        dialog.showErrorBox("Startup Failed", "Failed to download the OpenCERN Engine containers.\\n\\n" + err.message);
+        splash.close();
+        dialog.showErrorBox("Download Failed",
+          "Failed to download the OpenCERN Engine containers.\n\n" + err.message);
         app.quit();
         return;
       }
-      await splash.webContents.executeJavaScript(`document.getElementById('s').innerText = 'Starting physics environments...'`);
     } else {
-      console.log("Images present. Checking for updates in background...");
-      // Check for updates asynchronously so we don't block startup too long
+      console.log("Images present. Checking for updates...");
+      splashMsg('Checking for updates…');
       const hasUpdate = await Promise.race([
         dockerManager.checkForUpdates(),
-        new Promise(r => setTimeout(() => r(false), 3000)) // 3s timeout for ping check
+        new Promise(r => setTimeout(() => r(false), 5000))
       ]);
-      
+
       if (hasUpdate) {
         const result = dialog.showMessageBoxSync({
           type: 'info',
-          buttons: ['Update Now', 'Skip for now'],
+          buttons: ['Update Now', 'Skip'],
           title: 'Update Available',
-          message: 'A newer version of the OpenCERN engine is available. Would you like to download it now? (Recommended for performance and bug fixes)'
+          message: 'A newer version of the OpenCERN engine is available.\nUpdate now for the latest features and fixes.'
         });
         if (result === 0) {
-          await splash.webContents.executeJavaScript(`document.getElementById('s').innerText = 'Downloading Update... Please wait.'`);
+          splashMsg('Downloading update…');
           try {
-             await dockerManager.pullImages((msg) => {
-               splash.webContents.executeJavaScript(`document.getElementById('s').innerText = ${JSON.stringify('Updating: ' + msg)}`).catch(()=>{});
-             });
+            await dockerManager.pullImages((msg) => {
+              console.log(`[Update] ${msg}`);
+              splashMsg(msg);
+            });
           } catch (err) {
-             console.error("Update failed", err);
+            console.error("Update pull failed:", err.message);
           }
-          await splash.webContents.executeJavaScript(`document.getElementById('s').innerText = 'Starting physics environments...'`);
         }
       }
     }
 
-    // 4. Start ALL containers (frontend + API + streamer + xrootd)
+    // 5. Start all containers (stop old ones first, create network, docker run)
+    splashMsg('Starting physics environments…');
     console.log("Starting containers...");
-    await runDocker('up -d');
+    try {
+      await dockerManager.startAll((msg) => {
+        console.log(`[Start] ${msg}`);
+        splashMsg(msg);
+      });
+    } catch (err) {
+      console.error("Container start error:", err.message);
+    }
 
-    // 4. Wait for frontend (port 3000) — this is the gate
+    // 6. Wait for API (port 8080)
+    splashMsg('Waiting for API…');
+    console.log("Waiting for API (port 8080)...");
+    const apiOk = await waitForPort(8080, 60000);
+    console.log("API:", apiOk ? "READY" : "TIMEOUT (continuing)");
+
+    // 7. Wait for frontend (port 3000)
+    splashMsg('Loading interface…');
     console.log("Waiting for frontend (port 3000)...");
     const frontendOk = await waitForPort(3000, 90000);
     console.log("Frontend:", frontendOk ? "READY" : "TIMEOUT");
 
-    if (!frontendOk) {
-      splash.close();
-      dialog.showErrorBox("Startup Failed",
-        "Containers didn't start in time.\n\n" +
-        "Try running this in Terminal to debug:\n" +
-        "  docker compose -p opencern up --build\n\n" +
-        "Then restart OpenCERN.");
-      app.exit(1);
-      return;
-    }
-
-    // 6. Also wait for API (port 8080)
-    console.log("Waiting for API (port 8080)...");
-    const apiOk = await waitForPort(8080, 30000);
-    console.log("API:", apiOk ? "READY" : "TIMEOUT (continuing anyway)");
-
-    // 7. Show main window
+    // 8. Show main window
     win = new BrowserWindow({
       width: 1400, height: 900,
       titleBarStyle: 'hiddenInset',
@@ -233,6 +229,7 @@ if (!gotTheLock) {
     splash.close();
     win.show();
     win.loadURL('http://localhost:3000');
+    win.webContents.openDevTools({ mode: 'detach' });
     console.log("=== Ready ===");
   }
 
@@ -252,19 +249,102 @@ if (!gotTheLock) {
     if (process.platform !== 'darwin') app.quit()
   })
 
-  // Shutdown
+  // Shutdown — stop all containers gracefully
   app.on('before-quit', (e) => {
     if (!app.isQuiting) {
       e.preventDefault();
       console.log("Shutting down containers...");
-      exec('docker compose -p opencern stop', { cwd: composePath(), env: dockerEnv() }, () => {
+      if (dockerManager) {
+        dockerManager.stopAll().finally(() => {
+          app.isQuiting = true;
+          app.exit(0);
+        });
+      } else {
         app.isQuiting = true;
         app.exit(0);
-      });
+      }
     }
   });
 
   ipcMain.on('open-external-url', (event, url) => {
     shell.openExternal(url)
   })
+
+  // ── IPC Handlers ──
+
+  ipcMain.handle('check-docker-updates', async () => {
+    try {
+      if (!dockerManager) dockerManager = new DockerManager(dockerEnv());
+      const hasUpdate = await Promise.race([
+        dockerManager.checkForUpdates(),
+        new Promise(r => setTimeout(() => r(false), 10000))
+      ]);
+      return { available: hasUpdate };
+    } catch (err) {
+      return { available: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('start-docker-update', async () => {
+    try {
+      if (!dockerManager) dockerManager = new DockerManager(dockerEnv());
+      await dockerManager.pullImages((msg) => {
+        if (win) win.webContents.send('docker-update-progress', msg);
+      });
+      await dockerManager.startAll();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('get-docker-status', async () => {
+    try {
+      if (!dockerManager) dockerManager = new DockerManager(dockerEnv());
+      const status = await dockerManager.getContainerStatus();
+      return { running: true, containers: status };
+    } catch (err) {
+      return { running: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('restart-containers', async () => {
+    try {
+      if (!dockerManager) dockerManager = new DockerManager(dockerEnv());
+      await dockerManager.restartAll();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('get-container-logs', async (event, service) => {
+    try {
+      if (!dockerManager) dockerManager = new DockerManager(dockerEnv());
+      const logs = await dockerManager.getLogs(service || 'api');
+      return { logs, error: null };
+    } catch (err) {
+      return { logs: '', error: err.message };
+    }
+  });
+
+  ipcMain.handle('get-app-version', () => {
+    return { version: app.getVersion(), electron: process.versions.electron, node: process.versions.node };
+  });
+
+  // Background update check every 30 minutes
+  setInterval(async () => {
+    try {
+      if (!dockerManager) return;
+      const hasUpdate = await Promise.race([
+        dockerManager.checkForUpdates(),
+        new Promise(r => setTimeout(() => r(false), 10000))
+      ]);
+      if (hasUpdate && win) {
+        win.webContents.send('docker-update-available', true);
+      }
+    } catch {
+      // Silently ignore background check failures
+    }
+  }, 30 * 60 * 1000);
 }

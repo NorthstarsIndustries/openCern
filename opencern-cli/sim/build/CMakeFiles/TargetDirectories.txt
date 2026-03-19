@@ -1,0 +1,7 @@
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/opencern-sim.dir
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/edit_cache.dir
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/rebuild_cache.dir
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/list_install_components.dir
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/install.dir
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/install/local.dir
+/Users/icon/opencern/opencern-cli/sim/build/CMakeFiles/install/strip.dir

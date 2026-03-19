@@ -22,7 +22,7 @@ export async function pollProcess(id, onProgress) {
     while (true) {
         const status = await cernApi.processStatus(id);
         onProgress(status);
-        if (status.status === 'complete' || status.status === 'error') {
+        if (status.status === 'processed' || status.status === 'error') {
             return status;
         }
         await new Promise(r => setTimeout(r, 2000));

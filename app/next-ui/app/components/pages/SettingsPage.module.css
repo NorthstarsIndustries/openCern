@@ -1,0 +1,435 @@
+/* SettingsPage — App configuration & status */
+
+/* ── Layout ── */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  animation: oc-fadeIn 200ms ease;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--oc-space-xl) var(--oc-space-2xl) var(--oc-space-3xl);
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--oc-space-xl);
+}
+
+/* ── Page Header ── */
+.pageHeader h1 {
+  font-size: var(--oc-text-xl);
+  font-weight: 600;
+  color: var(--oc-text-primary);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.pageHeader p {
+  font-size: var(--oc-text-base);
+  color: var(--oc-text-muted);
+  margin: 0;
+}
+
+/* ── Section Card ── */
+.section {
+  background: var(--oc-bg-card);
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-xl);
+  overflow: hidden;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 0;
+}
+
+.sectionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--oc-radius-lg);
+  background: var(--oc-bg-elevated);
+  color: var(--oc-text-secondary);
+  flex-shrink: 0;
+}
+
+.sectionTitle {
+  font-size: var(--oc-text-md);
+  font-weight: 600;
+  color: var(--oc-text-primary);
+  margin: 0;
+}
+
+.sectionDesc {
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-muted);
+  margin: 2px 0 0;
+}
+
+.sectionBody {
+  padding: 16px 20px 20px;
+}
+
+/* ── Form Fields ── */
+.field {
+  margin-bottom: 14px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  display: block;
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  color: var(--oc-text-secondary);
+  margin-bottom: 6px;
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: var(--oc-text-base);
+  font-family: var(--oc-font-sans);
+  color: var(--oc-text-primary);
+  background: var(--oc-bg-input);
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-md);
+  outline: none;
+  transition: border-color var(--oc-transition);
+}
+
+.input::placeholder {
+  color: var(--oc-text-muted);
+}
+
+.input:focus {
+  border-color: var(--oc-border-focus);
+}
+
+.inputWithBtn {
+  padding-right: 38px;
+}
+
+.toggleBtn {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--oc-text-muted);
+  cursor: pointer;
+  border-radius: 0 var(--oc-radius-md) var(--oc-radius-md) 0;
+  transition: color var(--oc-transition);
+}
+
+.toggleBtn:hover {
+  color: var(--oc-text-secondary);
+}
+
+.select {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: var(--oc-text-base);
+  font-family: var(--oc-font-sans);
+  color: var(--oc-text-primary);
+  background: var(--oc-bg-input);
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-md);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235C5E6B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+  transition: border-color var(--oc-transition);
+}
+
+.select:focus {
+  border-color: var(--oc-border-focus);
+}
+
+.select option {
+  background: var(--oc-bg-elevated);
+  color: var(--oc-text-primary);
+}
+
+.hint {
+  font-size: var(--oc-text-xs);
+  color: var(--oc-text-muted);
+  margin-top: 6px;
+}
+
+.hint a {
+  color: var(--oc-blue-light);
+  text-decoration: none;
+}
+
+.hint a:hover {
+  text-decoration: underline;
+}
+
+/* ── Buttons ── */
+.btnRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  font-family: var(--oc-font-sans);
+  color: var(--oc-text-on-blue);
+  background: var(--oc-blue-light);
+  border: none;
+  border-radius: var(--oc-radius-md);
+  cursor: pointer;
+  transition: all var(--oc-transition);
+  white-space: nowrap;
+}
+
+.btnPrimary:hover {
+  background: #2563EB;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  font-family: var(--oc-font-sans);
+  color: var(--oc-text-secondary);
+  background: transparent;
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-md);
+  cursor: pointer;
+  transition: all var(--oc-transition);
+  white-space: nowrap;
+}
+
+.btnSecondary:hover {
+  color: var(--oc-text-primary);
+  background: var(--oc-bg-hover);
+  border-color: var(--oc-border);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Status Row ── */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--oc-bg-elevated);
+  border-radius: var(--oc-radius-lg);
+  margin-bottom: 12px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statusDotOnline {
+  background: var(--oc-success);
+  box-shadow: 0 0 6px var(--oc-success);
+}
+
+.statusDotOffline {
+  background: var(--oc-error);
+  box-shadow: 0 0 6px var(--oc-error);
+}
+
+.statusText {
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  color: var(--oc-text-primary);
+}
+
+/* ── Container List ── */
+.containerList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--oc-border-subtle);
+  border: 1px solid var(--oc-border-subtle);
+  border-radius: var(--oc-radius-lg);
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.containerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  background: var(--oc-bg-elevated);
+}
+
+.containerInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.containerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.containerDotUp {
+  background: var(--oc-success);
+}
+
+.containerDotDown {
+  background: var(--oc-text-muted);
+}
+
+.containerName {
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  color: var(--oc-text-primary);
+}
+
+.containerPort {
+  font-size: var(--oc-text-xs);
+  font-family: var(--oc-font-mono);
+  color: var(--oc-text-muted);
+}
+
+/* ── Update Banner ── */
+.updateBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--oc-radius-lg);
+  margin-top: 12px;
+}
+
+.updateBannerText {
+  font-size: var(--oc-text-sm);
+  font-weight: 500;
+  color: var(--oc-blue-light);
+}
+
+/* ── Version Row ── */
+.versionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.versionLabel {
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-secondary);
+}
+
+.versionBadge {
+  font-size: var(--oc-text-xs);
+  font-weight: 500;
+  font-family: var(--oc-font-mono);
+  color: var(--oc-blue-light);
+  background: var(--oc-blue-dim);
+  padding: 3px 10px;
+  border-radius: var(--oc-radius-full);
+}
+
+.lastChecked {
+  font-size: var(--oc-text-xs);
+  color: var(--oc-text-muted);
+  margin-top: 10px;
+}
+
+/* ── Storage Path ── */
+.pathDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--oc-bg-elevated);
+  border-radius: var(--oc-radius-lg);
+}
+
+.pathText {
+  font-size: var(--oc-text-sm);
+  font-family: var(--oc-font-mono);
+  color: var(--oc-text-primary);
+}
+
+.pathLink {
+  font-size: var(--oc-text-xs);
+  font-weight: 500;
+  color: var(--oc-blue-light);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity var(--oc-transition);
+}
+
+.pathLink:hover {
+  opacity: 0.8;
+}
+
+/* ── About Summary ── */
+.aboutSummary {
+  font-size: var(--oc-text-sm);
+  color: var(--oc-text-muted);
+  line-height: 1.55;
+}
+
+.aboutSummary a {
+  color: var(--oc-blue-light);
+  text-decoration: none;
+}
+
+.aboutSummary a:hover {
+  text-decoration: underline;
+}

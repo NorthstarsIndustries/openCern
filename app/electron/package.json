@@ -28,7 +28,9 @@
       {
         "from": "media/",
         "to": "media/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "../../docker-compose.yml",
@@ -37,12 +39,25 @@
       {
         "from": "../../containers/",
         "to": "containers/",
-        "filter": ["**/*", "!**/node_modules/**", "!**/__pycache__/**", "!**/venv/**", "!**/target/**", "!**/.cache/**", "!**/*.pyc"]
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/__pycache__/**",
+          "!**/venv/**",
+          "!**/target/**",
+          "!**/.cache/**",
+          "!**/*.pyc"
+        ]
       },
       {
         "from": "../../app/next-ui/",
         "to": "app/next-ui/",
-        "filter": ["**/*", "!**/node_modules/**", "!**/.next/**", "!**/out/**"]
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/.next/**",
+          "!**/out/**"
+        ]
       }
     ],
     "mac": {
@@ -51,7 +66,9 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64"]
+          "arch": [
+            "arm64"
+          ]
         }
       ],
       "darkModeSupport": true,
@@ -66,8 +83,16 @@
         "height": 380
       },
       "contents": [
-        { "x": 130, "y": 200 },
-        { "x": 410, "y": 200, "type": "link", "path": "/Applications" }
+        {
+          "x": 130,
+          "y": 200
+        },
+        {
+          "x": 410,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
       ]
     },
     "win": {
@@ -75,7 +100,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -93,7 +120,9 @@
     "protocols": [
       {
         "name": "OpenCERN Protocol",
-        "schemes": ["opencern"]
+        "schemes": [
+          "opencern"
+        ]
       }
     ]
   },
@@ -105,7 +134,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
     "concurrently": "^8.0.0",
-    "electron": "^28.0.0",
+    "electron": "^28.3.3",
     "electron-builder": "^24.0.0",
     "vite": "^5.0.0",
     "wait-on": "^7.0.0"

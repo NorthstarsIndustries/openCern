@@ -6,9 +6,8 @@
  * See LICENSE.enterprise for full terms.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { render, Box, Text, useApp, useInput, useStdout } from 'ink';
-import Spinner from 'ink-spinner';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { render, Box, Text, useApp, useInput, useStdout, Static } from 'ink';
 
 import { StatusBar } from './components/StatusBar.js';
 import { Prompt } from './components/Prompt.js';
@@ -17,14 +16,18 @@ import { ProgressBar } from './components/ProgressBar.js';
 import { FilePreview } from './components/FilePreview.js';
 import { QuantumPanel } from './components/QuantumPanel.js';
 import { DataTable } from './components/DataTable.js';
+import { KeyboardShortcuts } from './components/KeyboardShortcuts.js';
+import { Toast, useToast } from './components/Toast.js';
+import { InlineSpinner } from './components/Spinner.js';
 
 import { config } from './utils/config.js';
 import { add as addHistory, getAll as getAllHistory } from './utils/history.js';
 import { isAuthenticated } from './utils/auth.js';
 import { docker } from './services/docker.js';
 import { anthropicService, type ToolCall, type ToolResult, type AgenticEvent } from './services/anthropic.js';
+import { registry } from './commands/registry.js';
 
-import { getHelpText, getBannerText } from './commands/help.js';
+import { getHelpText } from './commands/help.js';
 import { getSystemStatus, formatStatus } from './commands/status.js';
 import { runDoctorChecks, formatDoctorResults } from './commands/doctor.js';
 import { login, logout, getUsername } from './commands/auth.js';
@@ -36,6 +39,28 @@ import { askQuestion } from './commands/ask.js';
 import { extractEvents, runClassification, ensureQuantumRunning } from './commands/quantum.js';
 import { openViz, renderASCII } from './commands/viz.js';
 import { quantumService } from './services/quantum.js';
+import { formatProfile, setProfileField, exportProfile } from './commands/profile.js';
+import {
+  listLocalDatasets, formatDatasetList, getDatasetStats,
+  renderHistogram, renderScatterPlot, headEvents, tailEvents,
+  describeDataset, filterEvents, sampleEvents, exportDataset,
+  mergeDatasets, correlateFields,
+} from './commands/datasets.js';
+import {
+  renderTree, catFile, grepFile, findFiles, diffFiles,
+  cleanFiles, diskUsage, cacheInfo,
+} from './commands/files.js';
+import {
+  getLogs, restartService, stopAll, containerTop,
+  networkInfo, quickHealth,
+} from './commands/containers.js';
+import {
+  whoami, listSessions, saveSession, loadSession,
+  getRecall, setAlias, resolveAlias, listAliases,
+  loadScript, quickGet, quickSet,
+} from './commands/session.js';
+import { envInfo, versionInfo, aboutInfo } from './commands/system.js';
+import { isSimBuilt, buildSim, launchSim, getSimStatus } from './commands/sim.js';
 
 type View =
   | 'home'
@@ -53,9 +78,13 @@ type View =
   | 'doctor'
   | 'update'
   | 'help'
-  | 'history';
+  | 'history'
+  | 'shortcuts';
+
+let outputLineIdCounter = 0;
 
 interface OutputLine {
+  id: number;
   text: string;
   color?: string;
   bold?: boolean;
@@ -91,7 +120,27 @@ interface AppState {
   configItems?: import('./commands/config.js').ConfigItem[];
   configIndex: number;
   configValue: string;
+  // Overlays
+  showShortcuts: boolean;
+  showCommandPalette: boolean;
+  // Session
+  sessionStart: number;
 }
+
+// ── API health gate ──────────────────────────────────────
+
+async function ensureApiReady(): Promise<{ ready: boolean; message?: string }> {
+  if (!docker.isDockerRunning()) {
+    return { ready: false, message: 'Docker is not running. Start Docker Desktop first.' };
+  }
+  const apiReady = await docker.isApiReady();
+  if (!apiReady) {
+    return { ready: false, message: 'API container is not running. Run /status or wait for auto-start.' };
+  }
+  return { ready: true };
+}
+
+// ── Main App ─────────────────────────────────────────────
 
 function App(): React.JSX.Element {
   const { exit } = useApp();
@@ -111,13 +160,18 @@ function App(): React.JSX.Element {
     quantumRunning: false,
     configIndex: 0,
     configValue: '',
+    showShortcuts: false,
+    showCommandPalette: false,
+    sessionStart: Date.now(),
   });
+
+  const { messages: toastMessages, addToast, dismissToast } = useToast();
 
   // Fullscreen responsive sizing
   const { stdout } = useStdout();
-  const [size, setSize] = useState({ 
-    columns: stdout.columns || 80, 
-    rows: stdout.rows || 24 
+  const [size, setSize] = useState({
+    columns: stdout.columns || 80,
+    rows: stdout.rows || 24,
   });
 
   useEffect(() => {
@@ -128,14 +182,21 @@ function App(): React.JSX.Element {
 
   function addOutput(lines: string | string[], color?: string, bold?: boolean) {
     const arr = Array.isArray(lines) ? lines : [lines];
+    const newLines = arr.map(text => ({ id: ++outputLineIdCounter, text, color, bold }));
     setState(s => ({
       ...s,
-      output: [...s.output, ...arr.map(text => ({ text, color, bold }))],
+      output: [...s.output, ...newLines],
     }));
   }
 
   function clearOutput() {
-    setState(s => ({ ...s, output: [] }));
+    // Push blank lines to scroll previous Static content out of view
+    const rows = size.rows || 24;
+    const blanks: OutputLine[] = Array.from({ length: rows }, () => ({
+      id: ++outputLineIdCounter,
+      text: '',
+    }));
+    setState(s => ({ ...s, output: [...s.output, ...blanks] }));
   }
 
   function setLoading(loading: boolean, msg = '') {
@@ -171,8 +232,26 @@ function App(): React.JSX.Element {
       clearOutput();
       return;
     }
-    // Escape = cancel streaming / deny tool
+    // Ctrl+K = command palette
+    if (key.ctrl && input === 'k') {
+      setState(s => ({ ...s, showCommandPalette: !s.showCommandPalette }));
+      return;
+    }
+    // ? = keyboard shortcuts (only when not typing)
+    if (input === '?' && !state.promptDisabled && !state.aiStreaming && state.view === 'home') {
+      setState(s => ({ ...s, showShortcuts: !s.showShortcuts }));
+      return;
+    }
+    // Escape = cancel/dismiss
     if (key.escape) {
+      if (state.showShortcuts) {
+        setState(s => ({ ...s, showShortcuts: false }));
+        return;
+      }
+      if (state.showCommandPalette) {
+        setState(s => ({ ...s, showCommandPalette: false }));
+        return;
+      }
       if (state.pendingTool) {
         handleDeny();
         return;
@@ -199,30 +278,34 @@ function App(): React.JSX.Element {
     const firstRun = config.isFirstRun();
     config.load();
 
+    const banner = [
+      '     ___                    ____ _____ ____  _   _',
+      '    / _ \\ _ __   ___ _ __  / ___| ____|  _ \\| \\ | |',
+      '   | | | | \'_ \\ / _ \\ \'_ \\| |   |  _| | |_) |  \\| |',
+      '   | |_| | |_) |  __/ | | | |___| |___|  _ <| |\\  |',
+      '    \\___/| .__/ \\___|_| |_|\\____|_____|_| \\_\\_| \\_|',
+      '         |_|',
+    ];
+
     if (firstRun) {
       addOutput([
-        '   _____                 _____________  _   __',
-        '  / __  /___  ___  ____ / ____/ ____/ |/ / _ \\/ |/ /',
-        ' / / / / __ \\/ _ \\/ __ \\/ /   / __/ / _  /  _  /   / ',
-        ' \\/_/ / .___/\\___/_/ /_/\\____/\\____/_/ |_/_/ |_/_/|_/  ',
-        '     /_/                                              ',
         '',
-        '  Welcome to OpenCERN CLI — Autonomous Mode',
+        ...banner,
+        '',
+        '  Welcome to OpenCERN CLI',
         '  AI-powered particle physics analysis and quantum computing',
         '',
         '  Run /config to configure your API keys.',
         '  Run /help to see all available commands.',
+        '  Press ? for keyboard shortcuts.',
         '',
       ], undefined, true);
     } else {
       addOutput([
-        '   _____                 _____________  _   __',
-        '  / __  /___  ___  ____ / ____/ ____/ |/ / _ \\/ |/ /',
-        ' / / / / __ \\/ _ \\/ __ \\/ /   / __/ / _  /  _  /   / ',
-        ' \\/_/ / .___/\\___/_/ /_/\\____/\\____/_/ |_/_/ |_/_/|_/  ',
-        '     /_/                                              ',
         '',
-        '  OpenCERN Engine Ready — Autonomous Mode',
+        ...banner,
+        '',
+        '  OpenCERN Engine Ready',
         '  Type / for commands or ask a physics question',
         '',
       ], undefined, true);
@@ -235,23 +318,22 @@ function App(): React.JSX.Element {
         if (running) {
           const present = docker.areImagesPresent();
           if (!present) {
-             addOutput('  missing required engine images. pulling from GHCR (this may take a minute)...', 'cyan');
-             try {
-                await docker.pullImages();
-                addOutput('  [+] engine downloaded successfully', 'green');
-             } catch (err) {
-                addOutput(`  [-] failed to pull engine: ${(err as Error).message}`, 'red');
-                return;
-             }
+            addOutput('  missing required engine images. pulling from GHCR...', 'cyan');
+            try {
+              await docker.pullImages();
+              addOutput('  [+] engine downloaded successfully', 'green');
+            } catch (err) {
+              addOutput(`  [-] failed to pull engine: ${(err as Error).message}`, 'red');
+              return;
+            }
           } else {
-             // Check for updates asynchronously
-             docker.checkForUpdates().then(hasUpdate => {
-                 if (hasUpdate) {
-                     addOutput('', 'gray');
-                     addOutput('  [*] An update is available for the OpenCERN engine!', 'cyan', true);
-                     addOutput('      Run "/update" to download the latest version.', 'cyan');
-                 }
-             }).catch(() => {});
+            docker.checkForUpdates().then(hasUpdate => {
+              if (hasUpdate) {
+                addOutput('', 'gray');
+                addOutput('  [*] An update is available for the OpenCERN engine!', 'cyan', true);
+                addOutput('      Run "/update" to download the latest version.', 'cyan');
+              }
+            }).catch(() => {});
           }
 
           const ready = await docker.isApiReady();
@@ -265,7 +347,7 @@ function App(): React.JSX.Element {
             }
           }
         } else {
-            addOutput('  [!] Docker Desktop is not running. Core features will be disabled.', 'yellow');
+          addOutput('  [~] Docker Desktop is not running. Core features will be disabled.', 'yellow');
         }
       })();
     }
@@ -275,7 +357,7 @@ function App(): React.JSX.Element {
     }
   }, []);
 
-  // ─── Agentic AI handler ──────────────────────────────────────────
+  // ─── Agentic AI handler ──────────────────────────────────
 
   async function runAgenticQuery(question: string) {
     setState(s => ({
@@ -321,12 +403,11 @@ function App(): React.JSX.Element {
               }));
               break;
             case 'error':
-              addOutput(`  [err] ${event.error}`, 'red');
+              addOutput(`  [-] ${event.error}`, 'red');
               setState(s => ({ ...s, aiStreaming: false, promptDisabled: false }));
               break;
           }
         },
-        // Human-in-the-loop approval callback
         async (toolCall: ToolCall) => {
           return new Promise<boolean>((resolve) => {
             approvalResolveRef.current = resolve;
@@ -343,15 +424,40 @@ function App(): React.JSX.Element {
           '  Run /config or /keys set anthropic <key>',
         ], 'yellow');
       } else {
-        addOutput(`  [err] ${(err as Error).message}`, 'red');
+        addOutput(`  [-] ${(err as Error).message}`, 'red');
       }
     }
   }
 
-  // ─── Command Router ────────────────────────────────────────────────
+  // ─── API-gated command helper ────────────────────────────
+
+  async function withApiCheck(fn: () => Promise<void>): Promise<void> {
+    const { ready, message } = await ensureApiReady();
+    if (!ready) {
+      addOutput(`  [-] ${message}`, 'yellow');
+      return;
+    }
+    await fn();
+  }
+
+  // Helper for parsing --key=value flags
+  function parseFlags(args: string[]): Record<string, string> {
+    const flags: Record<string, string> = {};
+    for (const arg of args) {
+      const match = arg.match(/^--(\w[\w-]*)(?:=(.+)|([<>]\d+\.?\d*))$/);
+      if (match) {
+        flags[match[1]] = match[2] || match[3] || 'true';
+      }
+    }
+    return flags;
+  }
+
+  // ─── Command Router ──────────────────────────────────────
 
   async function handleInput(raw: string) {
-    const input = raw.trim();
+    // Resolve aliases first
+    const resolved = resolveAlias(raw);
+    const input = resolved.trim();
     if (!input) return;
 
     addHistory(input);
@@ -360,6 +466,7 @@ function App(): React.JSX.Element {
     const cmd = parts[0].toLowerCase();
     const args = parts.slice(1);
     const argStr = args.join(' ');
+    const flags = parseFlags(args);
 
     switch (cmd) {
       case '/exit':
@@ -387,6 +494,8 @@ function App(): React.JSX.Element {
         return;
       }
 
+      // ─── System ────────────────────────────────────────────
+
       case '/status': {
         setState(s => ({ ...s, view: 'status' }));
         setLoading(true, 'checking system status...');
@@ -396,7 +505,7 @@ function App(): React.JSX.Element {
           addOutput(formatStatus(status));
         } catch (err) {
           setLoading(false);
-          addOutput(`  [err] ${(err as Error).message}`, 'red');
+          addOutput(`  [-] ${(err as Error).message}`, 'red');
         }
         return;
       }
@@ -410,7 +519,7 @@ function App(): React.JSX.Element {
           addOutput(formatDoctorResults(checks));
         } catch (err) {
           setLoading(false);
-          addOutput(`  [err] ${(err as Error).message}`, 'red');
+          addOutput(`  [-] ${(err as Error).message}`, 'red');
         }
         return;
       }
@@ -435,8 +544,6 @@ function App(): React.JSX.Element {
         return;
       }
 
-      // ─── Key Management ──────────────────────────────────────────
-
       case '/keys': {
         if (args.length === 0) {
           addOutput(getKeyStatus());
@@ -445,12 +552,12 @@ function App(): React.JSX.Element {
         const subCmd = args[0];
         if (subCmd === 'set' && args.length >= 3) {
           const result = setApiKey(args[1], args.slice(2).join(' '));
-          addOutput(`  ${result.success ? '[+]' : '[err]'} ${result.message}`, result.success ? 'green' : 'red');
+          addOutput(`  ${result.success ? '[+]' : '[-]'} ${result.message}`, result.success ? 'green' : 'red');
           return;
         }
         if (subCmd === 'remove' && args.length >= 2) {
           const result = removeApiKey(args[1]);
-          addOutput(`  ${result.success ? '[+]' : '[err]'} ${result.message}`, result.success ? 'green' : 'red');
+          addOutput(`  ${result.success ? '[+]' : '[-]'} ${result.message}`, result.success ? 'green' : 'red');
           return;
         }
         addOutput([
@@ -463,8 +570,6 @@ function App(): React.JSX.Element {
         ], 'gray');
         return;
       }
-
-      // ─── Model Management ────────────────────────────────────────
 
       case '/models': {
         setLoading(true, 'fetching models from Anthropic...');
@@ -480,7 +585,7 @@ function App(): React.JSX.Element {
           addOutput(['', '  Switch model: /model <id>', '']);
         } catch (err) {
           setLoading(false);
-          addOutput(`  [err] ${(err as Error).message}`, 'red');
+          addOutput(`  [-] ${(err as Error).message}`, 'red');
         }
         return;
       }
@@ -496,19 +601,16 @@ function App(): React.JSX.Element {
         return;
       }
 
-      // ─── Usage Stats ─────────────────────────────────────────────
-
       case '/usage': {
         addOutput(anthropicService.getUsageFormatted());
         return;
       }
 
-      // ─── Auth ─────────────────────────────────────────────────────
+      // ─── Auth ──────────────────────────────────────────────
 
       case '/login': {
         setState(s => ({ ...s, view: 'login' }));
         setLoading(true, 'initializing login...');
-
         try {
           const result = await login(
             (code: string, url: string) => {
@@ -527,7 +629,6 @@ function App(): React.JSX.Element {
               setState(s => ({ ...s, isLoading: true, loadingMsg: 'waiting for authorization...' }));
             }
           );
-
           setLoading(false);
           if (result.success) {
             addOutput([
@@ -584,6 +685,29 @@ function App(): React.JSX.Element {
         return;
       }
 
+      // ─── Profile ───────────────────────────────────────────
+
+      case '/profile': {
+        if (args[0] === 'set' && args.length >= 3) {
+          const result = setProfileField(args[1], args.slice(2).join(' '));
+          addOutput(`  ${result.success ? '[+]' : '[-]'} ${result.message}`, result.success ? 'green' : 'red');
+          return;
+        }
+        if (args[0] === 'export') {
+          addOutput(['', exportProfile(), '']);
+          return;
+        }
+        addOutput(formatProfile());
+        return;
+      }
+
+      case '/whoami': {
+        addOutput(whoami());
+        return;
+      }
+
+      // ─── File Operations ───────────────────────────────────
+
       case '/open': {
         const fileArg = argStr.replace('--json', '').replace('--root', '').trim();
         if (!fileArg) {
@@ -630,15 +754,336 @@ function App(): React.JSX.Element {
         return;
       }
 
+      case '/cat': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        if (!fileArg) { addOutput('  usage: /cat <file>', 'yellow'); return; }
+        addOutput(catFile(fileArg));
+        return;
+      }
+
+      case '/tree': {
+        addOutput(renderTree(argStr || undefined));
+        return;
+      }
+
+      case '/grep': {
+        if (args.length < 2) { addOutput('  usage: /grep <pattern> <file>', 'yellow'); return; }
+        addOutput(grepFile(args[0], args[1]));
+        return;
+      }
+
+      case '/find': {
+        if (!argStr) { addOutput('  usage: /find <pattern>', 'yellow'); return; }
+        addOutput(findFiles(argStr));
+        return;
+      }
+
+      case '/diff': {
+        if (args.length < 2) { addOutput('  usage: /diff <file1> <file2>', 'yellow'); return; }
+        addOutput(diffFiles(args[0], args[1]));
+        return;
+      }
+
+      case '/clean': {
+        const confirm = args.includes('--confirm');
+        addOutput(cleanFiles(!confirm));
+        return;
+      }
+
+      case '/disk': {
+        addOutput(diskUsage());
+        return;
+      }
+
+      case '/cache': {
+        const clear = args[0] === 'clear';
+        addOutput(cacheInfo(clear));
+        return;
+      }
+
+      // ─── Data Commands ─────────────────────────────────────
+
+      case '/datasets': {
+        const datasets = listLocalDatasets();
+        addOutput(formatDatasetList(datasets));
+        return;
+      }
+
+      case '/stats': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        if (!fileArg) { addOutput('  usage: /stats <file>', 'yellow'); return; }
+        addOutput(getDatasetStats(fileArg));
+        return;
+      }
+
+      case '/histogram': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const field = flags['field'] || 'pt';
+        if (!fileArg) { addOutput('  usage: /histogram <file> --field=pt', 'yellow'); return; }
+        addOutput(renderHistogram(fileArg, field));
+        return;
+      }
+
+      case '/scatter': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const xField = flags['x'] || 'pt';
+        const yField = flags['y'] || 'eta';
+        if (!fileArg) { addOutput('  usage: /scatter <file> --x=pt --y=eta', 'yellow'); return; }
+        addOutput(renderScatterPlot(fileArg, xField, yField));
+        return;
+      }
+
+      case '/head': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const n = flags['n'] ? parseInt(flags['n']) : 10;
+        if (!fileArg) { addOutput('  usage: /head <file> --n=10', 'yellow'); return; }
+        addOutput(headEvents(fileArg, n));
+        return;
+      }
+
+      case '/tail': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const n = flags['n'] ? parseInt(flags['n']) : 10;
+        if (!fileArg) { addOutput('  usage: /tail <file> --n=10', 'yellow'); return; }
+        addOutput(tailEvents(fileArg, n));
+        return;
+      }
+
+      case '/describe': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        if (!fileArg) { addOutput('  usage: /describe <file>', 'yellow'); return; }
+        addOutput(describeDataset(fileArg));
+        return;
+      }
+
+      case '/filter': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        if (!fileArg) { addOutput('  usage: /filter <file> --pt>40 --type=muon', 'yellow'); return; }
+        // Build filter map from flags like --pt>40 --type=muon
+        const filterMap: Record<string, string> = {};
+        for (const arg of args.slice(1)) {
+          const m = arg.match(/^--(\w+)(.+)$/);
+          if (m) filterMap[m[1]] = m[2].startsWith('=') ? m[2] : m[2];
+        }
+        addOutput(filterEvents(fileArg, filterMap));
+        return;
+      }
+
+      case '/sample': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const n = flags['n'] ? parseInt(flags['n']) : 1000;
+        if (!fileArg) { addOutput('  usage: /sample <file> --n=1000', 'yellow'); return; }
+        addOutput(sampleEvents(fileArg, n));
+        return;
+      }
+
+      case '/correlate': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        if (!fileArg) { addOutput('  usage: /correlate <file>', 'yellow'); return; }
+        addOutput(correlateFields(fileArg));
+        return;
+      }
+
+      case '/export': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const format = flags['format'] || 'csv';
+        if (!fileArg) { addOutput('  usage: /export <file> --format=csv', 'yellow'); return; }
+        addOutput(exportDataset(fileArg, format));
+        return;
+      }
+
+      case '/merge': {
+        if (args.length < 2) { addOutput('  usage: /merge <file1> <file2>', 'yellow'); return; }
+        addOutput(mergeDatasets(args[0], args[1]));
+        return;
+      }
+
+      case '/search': {
+        const query = argStr.trim();
+        if (!query) { addOutput('  usage: /search <query>', 'yellow'); return; }
+        await withApiCheck(async () => {
+          setLoading(true, `searching "${query}"...`);
+          try {
+            const { searchDatasets } = await import('./commands/download.js');
+            const datasets = await searchDatasets(query);
+            setLoading(false);
+            if (datasets.length === 0) {
+              addOutput(`  No results for "${query}"`);
+            } else {
+              addOutput([
+                '',
+                `  Search results for "${query}": ${datasets.length} dataset(s)`,
+                '  ────────────────────────────────────────',
+                ...datasets.slice(0, 15).map(d =>
+                  `  ${d.id.padEnd(12)} | ${(d.size / 1e9).toFixed(1).padStart(5)} GB | ${d.title}`
+                ),
+                ...(datasets.length > 15 ? [`  ... and ${datasets.length - 15} more`] : []),
+                '',
+              ]);
+            }
+          } catch (err) {
+            setLoading(false);
+            addOutput(`  [-] ${(err as Error).message}`, 'red');
+          }
+        });
+        return;
+      }
+
+      // ─── Container Commands ────────────────────────────────
+
+      case '/logs': {
+        const service = args[0];
+        addOutput(getLogs(service));
+        return;
+      }
+
+      case '/restart': {
+        const service = args[0];
+        const result = await restartService(service);
+        addOutput(result);
+        return;
+      }
+
+      case '/stop': {
+        const result = await stopAll();
+        addOutput(result);
+        return;
+      }
+
+      case '/pull': {
+        setLoading(true, 'pulling latest images...');
+        try {
+          await docker.pullImages();
+          setLoading(false);
+          addOutput('  [+] All images pulled to latest', 'green');
+        } catch (err) {
+          setLoading(false);
+          addOutput(`  [-] ${(err as Error).message}`, 'red');
+        }
+        return;
+      }
+
+      case '/top': {
+        addOutput(containerTop());
+        return;
+      }
+
+      case '/network': {
+        addOutput(networkInfo());
+        return;
+      }
+
+      case '/health': {
+        setLoading(true, 'checking health...');
+        const result = await quickHealth();
+        setLoading(false);
+        addOutput(result);
+        return;
+      }
+
+      // ─── Session Commands ──────────────────────────────────
+
+      case '/sessions': {
+        addOutput(listSessions());
+        return;
+      }
+
+      case '/save': {
+        const name = args[0];
+        if (!name) { addOutput('  usage: /save <name>', 'yellow'); return; }
+        addOutput(saveSession(name, state.output));
+        return;
+      }
+
+      case '/load': {
+        const name = args[0];
+        if (!name) { addOutput('  usage: /load <name>', 'yellow'); return; }
+        const session = loadSession(name);
+        if (!session) {
+          addOutput(`  [-] Session "${name}" not found`);
+        } else {
+          addOutput(session.lines);
+          session.output.forEach(line => addOutput(line, 'gray'));
+        }
+        return;
+      }
+
+      case '/recall': {
+        addOutput(getRecall());
+        return;
+      }
+
+      case '/alias': {
+        if (args.length === 0) {
+          addOutput(listAliases());
+          return;
+        }
+        if (args.length >= 2) {
+          addOutput(setAlias(args[0], args.slice(1).join(' ')));
+          return;
+        }
+        addOutput('  usage: /alias <name> <command>', 'yellow');
+        return;
+      }
+
+      case '/script': {
+        const file = args[0];
+        if (!file) { addOutput('  usage: /script <file>', 'yellow'); return; }
+        const commands = loadScript(file);
+        if (!commands) {
+          addOutput(`  [-] Could not load script: ${file}`, 'red');
+          return;
+        }
+        addOutput(`  Running ${commands.length} commands from ${file}...`, 'gray');
+        for (const command of commands) {
+          addOutput(`  > ${command}`, 'gray');
+          await handleInput(command);
+        }
+        addOutput('  [+] Script complete', 'green');
+        return;
+      }
+
+      case '/set': {
+        if (args.length < 2) { addOutput('  usage: /set <key> <value>', 'yellow'); return; }
+        addOutput(quickSet(args[0], args.slice(1).join(' ')));
+        return;
+      }
+
+      case '/get': {
+        if (!args[0]) { addOutput('  usage: /get <key>', 'yellow'); return; }
+        addOutput(quickGet(args[0]));
+        return;
+      }
+
+      // ─── System Info ───────────────────────────────────────
+
+      case '/env': {
+        addOutput(envInfo());
+        return;
+      }
+
+      case '/version': {
+        addOutput(versionInfo());
+        return;
+      }
+
+      case '/about': {
+        addOutput(aboutInfo());
+        return;
+      }
+
+      // ─── AI ────────────────────────────────────────────────
+
       case '/ask': {
         const question = argStr || 'What can you tell me about this dataset?';
         const fileIdx = args.indexOf('--file');
         const filePath = fileIdx >= 0 ? args[fileIdx + 1] : undefined;
         const cleanQuestion = question.replace('--file', '').replace(filePath || '', '').trim();
-
         await runAgenticQuery(cleanQuestion || question);
         return;
       }
+
+      // ─── Quantum ──────────────────────────────────────────
 
       case '/quantum': {
         const subCmd = args[0];
@@ -646,14 +1091,14 @@ function App(): React.JSX.Element {
 
         if (subCmd === 'status') {
           setLoading(true, 'checking quantum backend...');
-          const status = await quantumService.getStatus();
+          const qStatus = await quantumService.getStatus();
           setLoading(false);
           addOutput([
             '',
-            `  quantum backend: ${status.backend}`,
-            `  status: ${status.healthy ? 'healthy' : 'offline'}`,
+            `  quantum backend: ${qStatus.backend}`,
+            `  status: ${qStatus.healthy ? 'healthy' : 'offline'}`,
             '',
-          ], status.healthy ? 'green' : 'yellow');
+          ], qStatus.healthy ? 'green' : 'yellow');
           return;
         }
 
@@ -707,6 +1152,8 @@ function App(): React.JSX.Element {
         return;
       }
 
+      // ─── Viz ───────────────────────────────────────────────
+
       case '/viz': {
         const fileArg = args.find(a => !a.startsWith('-')) || '';
         const forceBrowser = args.includes('--browser');
@@ -725,74 +1172,107 @@ function App(): React.JSX.Element {
         return;
       }
 
-      case '/download': {
-        const query = argStr.trim();
-        
-        if (!query) {
-          setLoading(true, 'fetching available datasets...');
-          try {
-            const { searchDatasets } = await import('./commands/download.js');
-            const datasets = await searchDatasets('');
-            setLoading(false);
-            
-            if (datasets.length === 0) {
-              addOutput('  [-] no datasets available');
-              return;
-            }
-            
-            addOutput([
-              '',
-              '  AVAILABLE DATASETS',
-              '  ────────────────────────────────────────',
-              ...datasets.slice(0, 10).map(d => 
-                `  ${d.id.padEnd(12)} │ ${(d.size / 1e9).toFixed(1).padStart(5)} GB │ ${d.title}`
-              ),
-              ...(datasets.length > 10 ? [`  ... and ${datasets.length - 10} more`] : []),
-              '',
-              '  usage: /download <dataset_id> or <name>',
-              '',
-            ]);
-          } catch (err) {
-            setLoading(false);
-            addOutput(`  [-] API error: ${(err as Error).message}. ensure docker is running.`);
-          }
+      // ─── Sim ───────────────────────────────────────────────
+
+      case '/sim': {
+        if (args.includes('--build')) {
+          setLoading(true, 'building collision viewer...');
+          const result = buildSim((line) => {
+            setState(s => ({ ...s, loadingMsg: line }));
+          });
+          setLoading(false);
+          addOutput(`  ${result.success ? '[+]' : '[-]'} ${result.message}`, result.success ? 'green' : 'red');
           return;
         }
 
-        setLoading(true, `searching datasets for "${query}"...`);
-        try {
-          const { searchDatasets, startDownload, pollDownload } = await import('./commands/download.js');
-          const datasets = await searchDatasets(query);
-          
-          if (datasets.length === 0) {
-            setLoading(false);
-            addOutput(`  [-] no datasets found matching "${query}"`);
-            return;
-          }
-
-          const target = datasets.find(d => d.id === query || d.title.toLowerCase() === query.toLowerCase()) || datasets[0];
-          setLoading(true, `starting download for ${target.title}...`);
-          
-          const dlId = await startDownload(target);
-          
-          await pollDownload(dlId, (dlStatus) => {
-            setState(s => ({ ...s, loadingMsg: `downloading ${target.id}: ${(dlStatus.progress * 100).toFixed(0)}%` }));
-          });
-
-          setLoading(false);
-          addOutput([
-            '',
-            `  [+] DOWNLOAD COMPLETE: ${target.id}`,
-            `  TITLE: ${target.title}`,
-            `  SIZE:  ${(target.size / 1e9).toFixed(2)} GB`,
-            '',
-          ]);
-        } catch (err) {
-          setLoading(false);
-          addOutput(`  [-] API error: ${(err as Error).message}. ensure docker is running.`);
+        if (args.includes('--status') || !argStr.trim()) {
+          addOutput(getSimStatus());
+          return;
         }
+
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        const eventNum = flags['event'] ? parseInt(flags['event']) : undefined;
+        const result = launchSim(fileArg, eventNum);
+        addOutput(`  ${result.success ? '[+]' : '[-]'} ${result.message}`, result.success ? 'green' : 'red');
         return;
       }
+
+      // ─── Download (with API check) ────────────────────────
+
+      case '/download': {
+        const query = argStr.trim();
+
+        if (!query) {
+          await withApiCheck(async () => {
+            setLoading(true, 'fetching available datasets...');
+            try {
+              const { searchDatasets } = await import('./commands/download.js');
+              const datasets = await searchDatasets('');
+              setLoading(false);
+
+              if (datasets.length === 0) {
+                addOutput('  [-] no datasets available');
+                return;
+              }
+
+              addOutput([
+                '',
+                '  Available Datasets',
+                '  ────────────────────────────────────────',
+                ...datasets.slice(0, 10).map(d =>
+                  `  ${d.id.padEnd(12)} | ${(d.size / 1e9).toFixed(1).padStart(5)} GB | ${d.title}`
+                ),
+                ...(datasets.length > 10 ? [`  ... and ${datasets.length - 10} more`] : []),
+                '',
+                '  usage: /download <dataset_id> or <name>',
+                '',
+              ]);
+            } catch (err) {
+              setLoading(false);
+              addOutput(`  [-] ${(err as Error).message}`, 'red');
+            }
+          });
+          return;
+        }
+
+        await withApiCheck(async () => {
+          setLoading(true, `searching datasets for "${query}"...`);
+          try {
+            const { searchDatasets, startDownload, pollDownload } = await import('./commands/download.js');
+            const datasets = await searchDatasets(query);
+
+            if (datasets.length === 0) {
+              setLoading(false);
+              addOutput(`  [-] no datasets found matching "${query}"`);
+              return;
+            }
+
+            const target = datasets.find(d => d.id === query || d.title.toLowerCase() === query.toLowerCase()) || datasets[0];
+            setLoading(true, `starting download for ${target.title}...`);
+
+            const dlId = await startDownload(target);
+
+            await pollDownload(dlId, (dlStatus) => {
+              setState(s => ({ ...s, loadingMsg: `downloading ${target.id}: ${dlStatus.progress.toFixed(0)}%` }));
+            });
+
+            setLoading(false);
+            addOutput([
+              '',
+              `  [+] Download complete: ${target.id}`,
+              `  Title: ${target.title}`,
+              `  Size:  ${(target.size / 1e9).toFixed(2)} GB`,
+              '',
+            ], 'green');
+          } catch (err) {
+            setLoading(false);
+            addOutput(`  [-] ${(err as Error).message}`, 'red');
+          }
+        });
+        return;
+      }
+
+      // ─── Process (with API check) ─────────────────────────
 
       case '/process': {
         const fileArg = argStr.trim();
@@ -801,32 +1281,62 @@ function App(): React.JSX.Element {
           return;
         }
 
-        setLoading(true, `processing ${fileArg} via api container...`);
-        try {
-          const { processFile, pollProcess, formatEventSummary } = await import('./commands/process.js');
-          
-          const procId = await processFile(fileArg);
-          
-          const finalStatus = await pollProcess(procId, (pStatus) => {
-            setState(s => ({ ...s, loadingMsg: `processing... ${(pStatus.progress * 100).toFixed(0)}%` }));
-          });
+        await withApiCheck(async () => {
+          setLoading(true, `processing ${fileArg}...`);
+          try {
+            const { processFile, pollProcess, formatEventSummary } = await import('./commands/process.js');
 
-          setLoading(false);
-          addOutput([
-            '',
-            `  [+] PROCESSING COMPLETE: ${fileArg}`,
-            ...formatEventSummary(finalStatus.results),
-            '',
-          ]);
-        } catch (err) {
-          setLoading(false);
-          addOutput(`  [-] process error: ${(err as Error).message}. is the api ready?`);
-        }
+            const procId = await processFile(fileArg);
+
+            const finalStatus = await pollProcess(procId, (pStatus) => {
+              const pct = pStatus.progress != null ? `${pStatus.progress.toFixed(0)}%` : pStatus.status;
+              setState(s => ({ ...s, loadingMsg: `processing... ${pct}` }));
+            });
+
+            setLoading(false);
+            addOutput([
+              '',
+              `  [+] Processing complete: ${fileArg}`,
+              ...formatEventSummary(finalStatus.results),
+              '',
+            ]);
+          } catch (err) {
+            setLoading(false);
+            addOutput(`  [-] ${(err as Error).message}`, 'red');
+          }
+        });
         return;
       }
 
+      // ─── Analysis Placeholder Commands ─────────────────────
+
+      case '/plot':
+      case '/fit':
+      case '/classify':
+      case '/anomaly':
+      case '/compare': {
+        const fileArg = args.find(a => !a.startsWith('-')) || '';
+        if (!fileArg) {
+          addOutput(`  usage: ${cmd} <file> [options]`, 'yellow');
+          return;
+        }
+        // Delegate to AI for analysis
+        const analysisPrompt = `Run ${cmd} analysis on the file ${fileArg}. ${argStr}`;
+        await runAgenticQuery(analysisPrompt);
+        return;
+      }
+
+      case '/import':
+      case '/select':
+      case '/watch':
+      case '/macro': {
+        addOutput(`  ${cmd} is not yet implemented. Coming soon.`, 'yellow');
+        return;
+      }
+
+      // ─── Default: free-form question → agentic AI ─────────
+
       default: {
-        // Free-form question -> agentic AI
         if (!input.startsWith('/')) {
           await runAgenticQuery(input);
           return;
@@ -842,143 +1352,143 @@ function App(): React.JSX.Element {
     aiTokens, aiStreaming, aiTokenCount, aiLatency,
     pendingTool, toolResults,
     fileContent, progress, quantumJob, quantumRunning, quantumBackend, quantumCircuit,
-    promptDisabled } = state;
+    promptDisabled, showShortcuts } = state;
 
   const model = config.get('defaultModel');
 
+  // Stable reference for the prompt
+  const handleInputRef = useRef(handleInput);
+  handleInputRef.current = handleInput;
+
+  const stableHandleInput = useCallback((raw: string) => {
+    handleInputRef.current(raw);
+  }, []);
+
+  // Memoize separator to avoid re-creating string each render
+  const separator = useMemo(
+    () => '─'.repeat(Math.max(10, size.columns - 4)),
+    [size.columns]
+  );
+
   return (
-    <Box 
-      width={size.columns} 
-      height={size.rows} 
-      flexDirection="column" 
-      borderStyle="round" 
-      paddingX={1}
-      paddingY={0}
-    >
-      <StatusBar />
+    <>
+      {/* Output history — each line rendered once by Ink, never re-rendered */}
+      <Static items={output}>
+        {(line) => (
+          <Text
+            key={line.id}
+            color={(line.color as never) || 'white'}
+            bold={line.bold}
+          >
+            {line.text}
+          </Text>
+        )}
+      </Static>
 
-      {/* Output / Scroll Area */}
-      <Box 
-        flexDirection="column" 
-        flexGrow={1} 
-        paddingX={2} 
-        paddingY={1} 
-        overflowY="hidden"
-        justifyContent="flex-end" // Pushes text down like a real terminal
-      >
-        <Box flexDirection="column">
-          {output.slice(-(size.rows - 15)).map((line, i) => (
-            <Text
-              key={i}
-              color={(line.color as never) || 'white'}
-              bold={line.bold}
-            >
-              {line.text}
-            </Text>
-          ))}
-        </Box>
-      </Box>
+      {/* Live area — only this section redraws on state changes */}
+      <Box flexDirection="column" paddingX={1}>
+        {/* Toast notifications */}
+        <Toast messages={toastMessages} onDismiss={dismissToast} />
 
-      {/* AI streaming view */}
-      {(view === 'ask' || view === 'opask') && (aiTokens || aiStreaming || pendingTool) && (
-        <Box flexDirection={view === 'opask' ? 'row' : 'column'} paddingX={1}>
-          <Box flexDirection="column" flexGrow={1}>
-            <AIStream
-              tokens={aiTokens}
-              isStreaming={aiStreaming}
-              onCancel={() => { abortRef.current?.abort(); setState(s => ({ ...s, aiStreaming: false })); }}
-              model={model}
-              tokenCount={aiTokenCount}
-              latency={aiLatency}
-              pendingTool={pendingTool}
-              toolResults={toolResults}
-              onApprove={handleApprove}
-              onDeny={handleDeny}
-            />
-          </Box>
-          {view === 'opask' && fileContent && (
-            <Box flexDirection="column" flexGrow={1} marginLeft={2}>
-              <FilePreview
-                content={fileContent.content}
-                filename={fileContent.filename}
-                size={fileContent.size}
-                fileType={fileContent.fileType}
-                focused={false}
+        {/* Keyboard shortcuts overlay */}
+        {showShortcuts && (
+          <KeyboardShortcuts onClose={() => setState(s => ({ ...s, showShortcuts: false }))} />
+        )}
+
+        {/* AI streaming view */}
+        {(view === 'ask' || view === 'opask') && (aiTokens || aiStreaming || pendingTool) && (
+          <Box flexDirection={view === 'opask' ? 'row' : 'column'} paddingX={1}>
+            <Box flexDirection="column" flexGrow={1}>
+              <AIStream
+                tokens={aiTokens}
+                isStreaming={aiStreaming}
+                onCancel={() => { abortRef.current?.abort(); setState(s => ({ ...s, aiStreaming: false })); }}
+                model={model}
+                tokenCount={aiTokenCount}
+                latency={aiLatency}
+                pendingTool={pendingTool}
+                toolResults={toolResults}
+                onApprove={handleApprove}
+                onDeny={handleDeny}
               />
             </Box>
-          )}
-        </Box>
-      )}
+            {view === 'opask' && fileContent && (
+              <Box flexDirection="column" flexGrow={1} marginLeft={2}>
+                <FilePreview
+                  content={fileContent.content}
+                  filename={fileContent.filename}
+                  size={fileContent.size}
+                  fileType={fileContent.fileType}
+                  focused={false}
+                />
+              </Box>
+            )}
+          </Box>
+        )}
 
-      {/* File open view */}
-      {view === 'open' && fileContent && (
+        {/* File open view */}
+        {view === 'open' && fileContent && (
+          <Box paddingX={1}>
+            <FilePreview
+              content={fileContent.content}
+              filename={fileContent.filename}
+              size={fileContent.size}
+              fileType={fileContent.fileType}
+              onClose={() => setState(s => ({ ...s, view: 'home', fileContent: undefined }))}
+            />
+          </Box>
+        )}
+
+        {/* Quantum view */}
+        {view === 'quantum' && (
+          <Box paddingX={1}>
+            <QuantumPanel
+              job={quantumJob}
+              isRunning={quantumRunning}
+              backend={quantumBackend}
+              circuitDiagram={quantumCircuit}
+            />
+          </Box>
+        )}
+
+        {/* Progress bar */}
+        {progress && (
+          <Box paddingX={1}>
+            <ProgressBar
+              label={progress.label}
+              percent={progress.percent}
+              speed={progress.speed}
+              eta={progress.eta}
+              mode={progress.mode}
+            />
+          </Box>
+        )}
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <Box paddingX={1}>
+            <InlineSpinner label={loadingMsg} />
+          </Box>
+        )}
+
+        {/* Status bar + divider + prompt at bottom */}
+        <StatusBar />
+        <Text dimColor>{separator}</Text>
         <Box paddingX={1}>
-          <FilePreview
-            content={fileContent.content}
-            filename={fileContent.filename}
-            size={fileContent.size}
-            fileType={fileContent.fileType}
-            onClose={() => setState(s => ({ ...s, view: 'home', fileContent: undefined }))}
+          <Prompt
+            onSubmit={stableHandleInput}
+            disabled={promptDisabled}
+            placeholder={promptDisabled ? (pendingTool ? 'Enter to approve, Esc to skip' : 'Processing... (Esc to cancel)') : undefined}
           />
         </Box>
-      )}
-
-      {/* Quantum view */}
-      {view === 'quantum' && (
-        <Box paddingX={1}>
-          <QuantumPanel
-            job={quantumJob}
-            isRunning={quantumRunning}
-            backend={quantumBackend}
-            circuitDiagram={quantumCircuit}
-          />
-        </Box>
-      )}
-
-      {/* Progress bar */}
-      {progress && (
-        <Box paddingX={1}>
-          <ProgressBar
-            label={progress.label}
-            percent={progress.percent}
-            speed={progress.speed}
-            eta={progress.eta}
-            mode={progress.mode}
-          />
-        </Box>
-      )}
-
-      {/* Loading indicator */}
-      {isLoading && (
-        <Box paddingX={1}>
-          <Text color="blue"><Spinner type="dots" /></Text>
-          <Text color="gray">  {loadingMsg}</Text>
-        </Box>
-      )}
-
-      {/* Prompt anchored at bottom */}
-      <Box paddingX={1} marginTop={1} borderStyle="round" paddingY={0}>
-        <Prompt
-          onSubmit={handleInput}
-          disabled={promptDisabled}
-          placeholder={promptDisabled ? (pendingTool ? 'Enter to approve, Esc to skip' : 'Processing... (Esc to cancel)') : undefined}
-        />
       </Box>
-    </Box>
+    </>
   );
 }
 
 export async function startApp(): Promise<void> {
-  // Enter alternate screen buffer (like vim) to clear scrollback and act fully native
-  process.stdout.write('\x1b[?1049h');
-  
-  try {
-    const { waitUntilExit } = render(<App />, { exitOnCtrlC: false });
-    await waitUntilExit();
-  } finally {
-    // Leave alternate screen buffer on exit
-    process.stdout.write('\x1b[?1049l');
-  }
+  const { waitUntilExit } = render(<App />, { exitOnCtrlC: false });
+  await waitUntilExit();
 }
 
 export default App;

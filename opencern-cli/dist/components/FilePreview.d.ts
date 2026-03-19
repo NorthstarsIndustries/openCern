@@ -6,7 +6,8 @@ interface FilePreviewProps {
     fileType?: 'json' | 'text' | 'root-meta';
     onClose?: () => void;
     focused?: boolean;
+    maxHeight?: number;
 }
-export declare function FilePreview({ content, filename, size, fileType, onClose, focused, }: FilePreviewProps): React.JSX.Element;
+export declare function FilePreview({ content, filename, size, fileType, onClose, focused, maxHeight, }: FilePreviewProps): React.JSX.Element;
 export default FilePreview;
 //# sourceMappingURL=FilePreview.d.ts.map

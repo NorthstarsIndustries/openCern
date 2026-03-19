@@ -196,11 +196,19 @@ async def process_file(filename: str, background_tasks: BackgroundTasks,
     """Process a single file with optional experiment override."""
     filepath = os.path.join(DATA_DIR, filename)
     if not os.path.exists(filepath):
-        return {"error": "File not found"}
+        # Try to find the file by basename in any subfolder
+        basename = os.path.basename(filename)
+        for root, dirs, files in os.walk(DATA_DIR):
+            if basename in files:
+                filepath = os.path.join(root, basename)
+                filename = os.path.relpath(filepath, DATA_DIR)
+                break
+        else:
+            return {"error": f"File not found: {filename}"}
 
     process_status[filename] = "processing"
     background_tasks.add_task(run_processor, filename, filename, experiment)
-    return {"message": "Processing started", "status": "processing", "experiment": experiment}
+    return {"message": "Processing started", "status": "processing", "id": filename, "experiment": experiment}
 
 
 @router.post("/process/batch")

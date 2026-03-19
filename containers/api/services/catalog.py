@@ -58,14 +58,27 @@ def _xrd_to_http(uri: str) -> str:
     return uri
 
 
-def _parse_records(records: list) -> List[Dataset]:
-    """Parse raw CERN API records into Dataset models."""
+def _parse_records(records: list, file_type: str = "root") -> List[Dataset]:
+    """Parse raw CERN API records into Dataset models.
+    
+    Args:
+        file_type: Filter files by extension. "root" (default) for .root only,
+                   "all" for all file types.
+    """
     out = []
     for r in records:
         m = r.get("metadata", {})
         raw_files = m.get("files", [])
         files = [_xrd_to_http(f["uri"]) for f in raw_files if f.get("uri")]
+
+        # Filter by file type if specified
+        if file_type == "root":
+            files = [f for f in files if f.lower().endswith(".root")]
+
         if not files:
+            # Skip datasets with no matching files
+            if file_type != "all":
+                continue
             recid = str(r.get("id", ""))
             files = [f"https://opendata.cern.ch/record/{recid}"]
 
@@ -89,12 +102,12 @@ def _parse_records(records: list) -> List[Dataset]:
 # ──────────────────────────────────────────────────────────────────
 # Core: fetch ONE page directly from CERN API (instant)
 # ──────────────────────────────────────────────────────────────────
-async def _fetch_page(client: httpx.AsyncClient, experiment: str, page: int, size: int) -> dict:
+async def _fetch_page(client: httpx.AsyncClient, experiment: str, page: int, size: int, file_type: str = "root") -> dict:
     """
     Single API call to CERN OpenData → returns one page of results.
     Cached per (experiment, page, size) for 5 minutes.
     """
-    cache_key = f"{experiment}_p{page}_s{size}"
+    cache_key = f"{experiment}_p{page}_s{size}_ft{file_type}"
     cached = _get(cache_key)
     if cached is not None:
         return cached
@@ -113,7 +126,7 @@ async def _fetch_page(client: httpx.AsyncClient, experiment: str, page: int, siz
     hits = data.get("hits", {})
     total = hits.get("total", 0)
     records = hits.get("hits", [])
-    datasets = _parse_records(records)
+    datasets = _parse_records(records, file_type=file_type)
 
     result = {
         "datasets": datasets,
@@ -130,10 +143,13 @@ async def _fetch_page(client: httpx.AsyncClient, experiment: str, page: int, siz
 # ──────────────────────────────────────────────────────────────────
 # Public API
 # ──────────────────────────────────────────────────────────────────
-async def fetch_datasets(client: httpx.AsyncClient, experiment: str, page: int = 1, size: int = 20) -> dict:
+async def fetch_datasets(client: httpx.AsyncClient, experiment: str, page: int = 1, size: int = 20, file_type: str = "root") -> dict:
     """
     Fetch datasets for any experiment with instant pagination.
     Each page = 1 CERN API call (~1s first time, 0ms cached).
+    
+    Args:
+        file_type: "root" (default) filters to .root files only. "all" returns all files.
     """
     exp_map = {"Alice": "ALICE", "Atlas": "ATLAS"}
     exp = exp_map.get(experiment, experiment)
@@ -143,11 +159,11 @@ async def fetch_datasets(client: httpx.AsyncClient, experiment: str, page: int =
         featured = [Dataset(**d) for d in CMS_FEATURED]
         remaining = size - len(featured)
         if remaining > 0:
-            cern = await _fetch_page(client, "CMS", 1, remaining)
+            cern = await _fetch_page(client, "CMS", 1, remaining, file_type=file_type)
             result_datasets = featured + cern["datasets"]
             total = cern["total"] + len(featured)
         else:
-            cern = await _fetch_page(client, "CMS", 1, 1)  # just for total count
+            cern = await _fetch_page(client, "CMS", 1, 1, file_type=file_type)  # just for total count
             result_datasets = featured[:size]
             total = cern["total"] + len(featured)
         return {
@@ -163,7 +179,7 @@ async def fetch_datasets(client: httpx.AsyncClient, experiment: str, page: int =
         # Calculate the corresponding CERN API page
         cern_offset = (page - 1) * size - featured_count
         cern_page = max(1, math.ceil(cern_offset / size) + 1)
-        result = await _fetch_page(client, "CMS", cern_page, size)
+        result = await _fetch_page(client, "CMS", cern_page, size, file_type=file_type)
         result["total"] = result["total"] + featured_count
         result["page"] = page
         result["pages"] = max(1, math.ceil(result["total"] / size))
@@ -172,9 +188,9 @@ async def fetch_datasets(client: httpx.AsyncClient, experiment: str, page: int =
     elif exp == "all":
         # Fetch page 1 of each experiment in parallel
         import asyncio
-        cms_t = fetch_datasets(client, "CMS", page, size)
-        alice_t = _fetch_page(client, "ALICE", page, size)
-        atlas_t = _fetch_page(client, "ATLAS", page, size)
+        cms_t = fetch_datasets(client, "CMS", page, size, file_type=file_type)
+        alice_t = _fetch_page(client, "ALICE", page, size, file_type=file_type)
+        atlas_t = _fetch_page(client, "ATLAS", page, size, file_type=file_type)
         cms, alice, atlas = await asyncio.gather(cms_t, alice_t, atlas_t)
 
         merged = cms["datasets"] + alice["datasets"] + atlas["datasets"]
@@ -188,4 +204,4 @@ async def fetch_datasets(client: httpx.AsyncClient, experiment: str, page: int =
 
     else:
         # ALICE, ATLAS, or any other experiment — direct proxy
-        return await _fetch_page(client, exp, page, size)
+        return await _fetch_page(client, exp, page, size, file_type=file_type)
