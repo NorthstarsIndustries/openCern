@@ -3,39 +3,34 @@
 
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function OAuthCallbackInner() {
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState('Processing...');
+  const hasRun = useRef(false);
+
+  const code = searchParams.get('code');
+  const state = searchParams.get('state');
+  const error = searchParams.get('error');
+
+  const status = useMemo(() => {
+    if (error) return `Authorization denied: ${error}`;
+    if (!code) return 'No authorization code received.';
+    return 'Connected! You can close this window.';
+  }, [error, code]);
 
   useEffect(() => {
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    const error = searchParams.get('error');
+    if (hasRun.current || !code) return;
+    hasRun.current = true;
 
-    if (error) {
-      setStatus(`Authorization denied: ${error}`);
-      return;
-    }
-
-    if (!code) {
-      setStatus('No authorization code received.');
-      return;
-    }
-
-    // Send the code back to the parent window via localStorage event
-    // The main app listens for this
     try {
       localStorage.setItem('opencern-oauth-result', JSON.stringify({ code, state, timestamp: Date.now() }));
-      setStatus('Connected! You can close this window.');
-      // Auto-close after a moment
       setTimeout(() => window.close(), 1500);
-    } catch (err) {
-      setStatus('Failed to save authorization code.');
+    } catch {
+      // Storage write failed — status already shows fallback
     }
-  }, [searchParams]);
+  }, [code, state]);
 
   return (
     <div style={{

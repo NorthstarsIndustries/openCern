@@ -61,7 +61,6 @@
 		A5ECE2C96FF2C865D3CD39A5 /* SetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupViewModel.swift; sourceTree = "<group>"; };
 		A6106D84C28D2EE2AD9BE326 /* ProgressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressBarView.swift; sourceTree = "<group>"; };
 		A65D04484D9ADC69139283C5 /* UpdateStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateStatus.swift; sourceTree = "<group>"; };
-		AC98511B3B374C973D2DB179 /* OpenCERN.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenCERN.entitlements; sourceTree = "<group>"; };
 		BDDA1148554BF9F0159B1AE6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CD92211DB43F093A0A5CBC72 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CEED35185B823E8B03479325 /* AddContainerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContainerSheet.swift; sourceTree = "<group>"; };
@@ -106,7 +105,6 @@
 			isa = PBXGroup;
 			children = (
 				6BB7BCA6B9EF555B07D2E3EC /* Info.plist */,
-				AC98511B3B374C973D2DB179 /* OpenCERN.entitlements */,
 				DC7DD3252149BF17F3ECFC22 /* App */,
 				2103A60A182C4CEB0F52F697 /* Components */,
 				C2681B22C888F0D79C3C3C7D /* Models */,
@@ -287,7 +285,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = OpenCERN/OpenCERN.entitlements;
+				CODE_SIGN_ENTITLEMENTS = OpenCERN.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -427,7 +425,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = OpenCERN/OpenCERN.entitlements;
+				CODE_SIGN_ENTITLEMENTS = OpenCERN.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
