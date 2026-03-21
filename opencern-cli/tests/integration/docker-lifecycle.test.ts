@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'child_process';
-import { mkdirSync } from 'fs';
+import { mkdirSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -46,7 +46,8 @@ describe.skipIf(!DOCKER_AVAILABLE)('Docker lifecycle integration', () => {
     const { docker } = await import('../../src/services/docker.js');
     docker.ensureComposeFile(false);
 
-    const compose = docker.getComposeFile();
+    const composePath = docker.getComposeFile();
+    const compose = readFileSync(composePath, 'utf-8');
     expect(compose).toContain('services:');
     expect(compose).toContain('api');
     expect(compose).toContain('streamer');
@@ -57,7 +58,8 @@ describe.skipIf(!DOCKER_AVAILABLE)('Docker lifecycle integration', () => {
     const { docker } = await import('../../src/services/docker.js');
     docker.ensureComposeFile(true);
 
-    const compose = docker.getComposeFile();
+    const composePath = docker.getComposeFile();
+    const compose = readFileSync(composePath, 'utf-8');
     expect(compose).toContain('quantum');
     expect(compose).toContain('8082');
   });
