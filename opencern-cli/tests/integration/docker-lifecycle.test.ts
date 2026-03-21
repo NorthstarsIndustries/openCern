@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { execSync } from 'child_process';
+import { mkdirSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 
 const DOCKER_AVAILABLE = (() => {
   try {
@@ -11,6 +14,10 @@ const DOCKER_AVAILABLE = (() => {
 })();
 
 describe.skipIf(!DOCKER_AVAILABLE)('Docker lifecycle integration', () => {
+  beforeAll(() => {
+    mkdirSync(join(homedir(), '.opencern'), { recursive: true });
+  });
+
   const COMPOSE_SERVICES = ['api', 'xrootd', 'streamer'];
   const IMAGES = [
     'ghcr.io/ceoatnorthstar/api:latest',
