@@ -2,6 +2,16 @@
   "name": "opencern-launcher",
   "private": true,
   "version": "1.0.0",
+  "description": "OpenCERN Desktop Launcher — manage CERN Open Data containers and analysis tools",
+  "author": {
+    "name": "NorthStars Industries",
+    "email": "contact@northstarcorp.co"
+  },
+  "homepage": "https://github.com/NorthstarsIndustries/openCern",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NorthstarsIndustries/openCern.git"
+  },
   "main": "electron-dist/main.js",
   "scripts": {
     "dev": "npm run build:electron && concurrently -k \"next dev -p 3001\" \"wait-on http://localhost:3001 && electron .\"",
@@ -17,6 +27,7 @@
   "build": {
     "appId": "com.opencern.launcher",
     "productName": "OpenCERN",
+    "publish": null,
     "directories": {
       "output": "release"
     },
