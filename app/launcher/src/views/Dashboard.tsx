@@ -1,15 +1,21 @@
-import React, { useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  ExternalLink,
   PlayCircle,
   StopCircle,
   RefreshCw,
   Bell,
   Download,
+  X,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Card } from "../components/ui/card";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "../components/ui/collapsible";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../components/ui/tooltip";
 import ContainerCard from "../components/ContainerCard";
-import GlassPanel from "../components/GlassPanel";
 import type { ContainerInfo } from "../hooks/useDocker";
 import type { UpdateStatus } from "../hooks/useUpdater";
 
@@ -43,28 +49,52 @@ export default function Dashboard({
   onRestart,
   onStartAll,
   onStopAll,
-  onOpenWebApp,
   onCheckUpdates,
   onDismissUpdates,
   onPullUpdates,
   getLogs,
   getStats,
 }: DashboardProps) {
-  const builtIn = useMemo(
-    () => containers.filter((c) => !c.is_custom),
-    [containers],
-  );
-  const custom = useMemo(
-    () => containers.filter((c) => c.is_custom),
-    [containers],
-  );
+  const builtIn = useMemo(() => containers.filter((c) => !c.is_custom), [containers]);
+  const custom = useMemo(() => containers.filter((c) => c.is_custom), [containers]);
+  const [servicesOpen, setServicesOpen] = useState(true);
+  const [customOpen, setCustomOpen] = useState(true);
 
   const runningCount = containers.filter((c) => c.state === "running").length;
   const totalCount = containers.length;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Update Banner */}
+      {/* Header bar */}
+      <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-border">
+        <div>
+          <h2 className="text-sm font-semibold text-text-primary">Services</h2>
+          <p className="text-xs text-text-tertiary">
+            {runningCount} of {totalCount} running
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="icon" size="icon" onClick={onCheckUpdates}>
+                <RefreshCw size={13} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Check for updates</TooltipContent>
+          </Tooltip>
+          <Button variant="ghost" size="sm" onClick={onStartAll}>
+            <PlayCircle size={13} className="text-status-running" />
+            Start All
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onStopAll}>
+            <StopCircle size={13} className="text-status-stopped" />
+            Stop All
+          </Button>
+        </div>
+      </div>
+
+      {/* Update banner */}
       <AnimatePresence>
         {hasUpdates && updateStatus && (
           <motion.div
@@ -73,137 +103,107 @@ export default function Dashboard({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden shrink-0"
           >
-            <div
-              className="mx-4 mt-2 p-3 rounded-xl flex items-center justify-between"
-              style={{
-                background: "var(--color-accent-muted)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <Bell size={14} style={{ color: "var(--color-accent)" }} />
-                <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                  {updateStatus.image_updates.length > 0
-                    ? `${updateStatus.image_updates.length} image update${updateStatus.image_updates.length > 1 ? "s" : ""} available`
-                    : "Launcher update available"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={onPullUpdates} className="btn-glass text-xs flex items-center gap-1.5 py-1 px-3">
-                  <Download size={12} /> Update
-                </button>
-                <button onClick={onDismissUpdates} className="btn-icon" style={{ color: "var(--color-text-tertiary)" }}>
-                  &times;
-                </button>
-              </div>
+            <div className="mx-6 mt-3">
+              <Card className="px-4 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Bell size={13} className="text-text-secondary" />
+                  <span className="text-xs text-text-secondary">
+                    {updateStatus.image_updates.length > 0
+                      ? `${updateStatus.image_updates.length} image update${updateStatus.image_updates.length > 1 ? "s" : ""} available`
+                      : "Launcher update available"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={onPullUpdates} className="gap-1.5">
+                    <Download size={11} /> Update
+                  </Button>
+                  <Button variant="icon" size="icon-sm" onClick={onDismissUpdates}>
+                    <X size={13} />
+                  </Button>
+                </div>
+              </Card>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div className="px-4 pt-3 pb-2 shrink-0">
-        {/* Open in Browser — hero button */}
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={onOpenWebApp}
-          className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2.5 font-semibold text-sm"
-          style={{
-            background: "var(--color-accent)",
-            color: "#ffffff",
-            transition: "background 0.15s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-accent-hover)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-accent)")}
-        >
-          <ExternalLink size={16} />
-          Open in Browser
-        </motion.button>
-
-        {/* Status bar + master controls */}
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: "var(--color-text-secondary)" }}>
-              {runningCount}/{totalCount} running
-            </span>
-            <button onClick={onCheckUpdates} className="btn-icon" title="Check for updates">
-              <RefreshCw size={12} />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={onStartAll}
-              className="btn-glass text-xs flex items-center gap-1.5 py-1.5 px-3"
-            >
-              <PlayCircle size={12} style={{ color: "var(--color-status-running)" }} />
-              Start All
-            </button>
-            <button
-              onClick={onStopAll}
-              className="btn-glass text-xs flex items-center gap-1.5 py-1.5 px-3"
-            >
-              <StopCircle size={12} style={{ color: "var(--color-status-stopped)" }} />
-              Stop All
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Container list */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-6 py-4">
         {loading && containers.length === 0 ? (
           <div className="flex items-center justify-center h-40">
-            <RefreshCw size={20} className="animate-spin" style={{ color: "var(--color-text-tertiary)" }} />
+            <div className="w-4 h-4 border border-white/20 border-t-white/60 rounded-full animate-spin" />
           </div>
         ) : error ? (
-          <GlassPanel className="text-center">
-            <p className="text-xs" style={{ color: "var(--color-status-stopped)" }}>
-              {error}
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)" }}>
+          <Card className="p-5 text-center">
+            <p className="text-xs text-status-stopped">{error}</p>
+            <p className="text-xs mt-1 text-text-tertiary">
               Make sure Docker is running.
             </p>
-          </GlassPanel>
+          </Card>
         ) : (
-          <div className="space-y-2.5">
-            {/* Section: Services */}
-            <div className="space-y-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider px-1 pt-1" style={{ color: "var(--color-text-tertiary)" }}>
-                Services
-              </h2>
-              {builtIn.map((c) => (
-                <ContainerCard
-                  key={c.container_name}
-                  container={c}
-                  onStart={onStart}
-                  onStop={onStop}
-                  onRestart={onRestart}
-                  getLogs={getLogs}
-                  getStats={getStats}
-                />
-              ))}
-            </div>
+          <div className="space-y-4">
+            {/* Built-in services */}
+            {builtIn.length > 0 && (
+              <Collapsible open={servicesOpen} onOpenChange={setServicesOpen}>
+                <CollapsibleTrigger className="flex items-center gap-2 mb-2 cursor-pointer">
+                  {servicesOpen ? (
+                    <ChevronDown size={12} className="text-text-tertiary" />
+                  ) : (
+                    <ChevronRight size={12} className="text-text-tertiary" />
+                  )}
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">
+                    Core Services
+                  </span>
+                  <Badge variant="count">({builtIn.length})</Badge>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="grid grid-cols-1 gap-2">
+                    {builtIn.map((c) => (
+                      <ContainerCard
+                        key={c.container_name}
+                        container={c}
+                        onStart={onStart}
+                        onStop={onStop}
+                        onRestart={onRestart}
+                        getLogs={getLogs}
+                        getStats={getStats}
+                      />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
-            {/* Section: Custom Containers */}
+            {/* Custom containers */}
             {custom.length > 0 && (
-              <div className="space-y-2 pt-2">
-                <h2 className="text-xs font-semibold uppercase tracking-wider px-1" style={{ color: "var(--color-text-tertiary)" }}>
-                  Custom
-                </h2>
-                {custom.map((c) => (
-                  <ContainerCard
-                    key={c.container_name}
-                    container={c}
-                    onStart={onStart}
-                    onStop={onStop}
-                    onRestart={onRestart}
-                    getLogs={getLogs}
-                    getStats={getStats}
-                  />
-                ))}
-              </div>
+              <Collapsible open={customOpen} onOpenChange={setCustomOpen}>
+                <CollapsibleTrigger className="flex items-center gap-2 mb-2 cursor-pointer">
+                  {customOpen ? (
+                    <ChevronDown size={12} className="text-text-tertiary" />
+                  ) : (
+                    <ChevronRight size={12} className="text-text-tertiary" />
+                  )}
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">
+                    Custom
+                  </span>
+                  <Badge variant="count">({custom.length})</Badge>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="grid grid-cols-1 gap-2">
+                    {custom.map((c) => (
+                      <ContainerCard
+                        key={c.container_name}
+                        container={c}
+                        onStart={onStart}
+                        onStop={onStop}
+                        onRestart={onRestart}
+                        getLogs={getLogs}
+                        getStats={getStats}
+                      />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
         )}

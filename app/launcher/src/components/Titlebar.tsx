@@ -1,49 +1,44 @@
 import React from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, X } from "lucide-react";
+import { invoke } from "../lib/ipc";
+import { Button } from "./ui/button";
 
-interface TitlebarProps {
-  title?: string;
-}
-
-export default function Titlebar({ title = "OpenCERN Launcher" }: TitlebarProps) {
-  const appWindow = getCurrentWindow();
-
-  const handleMinimize = () => appWindow.minimize();
-  const handleClose = () => appWindow.close();
-
+export default function Titlebar() {
   return (
     <div
-      data-tauri-drag-region
-      className="flex items-center justify-between h-12 px-4 select-none shrink-0"
+      className="flex items-center justify-between h-10 px-4 select-none shrink-0 border-b border-border"
       style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
     >
-      {/* macOS traffic lights take this space — leave ~70px gap on the left */}
+      {/* macOS traffic lights space */}
       <div className="w-[70px]" />
 
-      <span
-        data-tauri-drag-region
-        className="text-xs font-medium tracking-wide"
-        style={{ color: "var(--color-text-tertiary)" }}
-      >
-        {title}
-      </span>
-
-      {/* Window controls (visible on Windows/Linux, hidden on macOS via CSS) */}
       <div
-        className="flex items-center gap-1 mac-hidden"
+        className="flex-1"
+        style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+      />
+
+      {/* Window controls — only on Windows/Linux */}
+      <div
+        className="flex items-center gap-0.5 mac-hidden"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-        <button onClick={handleMinimize} className="btn-icon" aria-label="Minimize">
-          <Minus size={14} />
-        </button>
-        <button
-          onClick={handleClose}
-          className="btn-icon hover:!bg-red-500/20 hover:!text-red-400"
-          aria-label="Close"
+        <Button
+          variant="icon"
+          size="icon-sm"
+          onClick={() => invoke("window:minimize")}
+          aria-label="Minimize"
         >
-          <X size={14} />
-        </button>
+          <Minus size={13} />
+        </Button>
+        <Button
+          variant="icon"
+          size="icon-sm"
+          onClick={() => invoke("window:close")}
+          aria-label="Close"
+          className="hover:!text-red-400"
+        >
+          <X size={13} />
+        </Button>
       </div>
     </div>
   );

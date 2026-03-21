@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { useState, useEffect, useCallback } from "react";
+import { invoke, listen } from "../lib/ipc";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Download, Loader2, AlertCircle, ExternalLink, ArrowRight } from "lucide-react";
+import { Check, Download, AlertCircle, ExternalLink, ArrowRight } from "lucide-react";
+import { Button } from "../components/ui/button";
 import ProgressBar from "../components/ProgressBar";
 
 interface SetupProps {
@@ -19,9 +19,8 @@ interface PullProgress {
 }
 
 type Step = "docker-check" | "pull-images" | "ready";
-
 const STEPS: Step[] = ["docker-check", "pull-images", "ready"];
-const STEP_LABELS = ["Check Docker", "Download", "Ready"];
+const STEP_LABELS = ["Docker", "Download", "Ready"];
 
 export default function Setup({ onComplete }: SetupProps) {
   const [step, setStep] = useState<Step>("docker-check");
@@ -45,12 +44,10 @@ export default function Setup({ onComplete }: SetupProps) {
       });
       setDockerInstalled(status.installed);
       setDockerRunning(status.running);
-
       if (!status.installed) {
         const url = await invoke<string>("get_docker_install_url");
         setInstallUrl(url);
       }
-
       if (status.installed && status.running) {
         setTimeout(() => setStep("pull-images"), 600);
       }
@@ -62,9 +59,7 @@ export default function Setup({ onComplete }: SetupProps) {
     }
   }, []);
 
-  useEffect(() => {
-    checkDocker();
-  }, [checkDocker]);
+  useEffect(() => { checkDocker(); }, [checkDocker]);
 
   useEffect(() => {
     const unlisten = listen<PullProgress>("pull-progress", (event) => {
@@ -74,9 +69,7 @@ export default function Setup({ onComplete }: SetupProps) {
         setPulling(false);
       }
     });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
+    return () => { unlisten.then((fn) => fn()); };
   }, []);
 
   const startPull = useCallback(async () => {
@@ -104,286 +97,190 @@ export default function Setup({ onComplete }: SetupProps) {
   }, [onComplete]);
 
   return (
-    <div className="flex-1 flex flex-col" style={{ background: "var(--color-bg-base)" }}>
-      {/* Top section with logo */}
-      <div className="flex flex-col items-center pt-12 pb-6 px-8">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="text-center"
-        >
-          <h1
-            className="text-xl font-semibold tracking-tight"
-            style={{ color: "var(--color-text-primary)", letterSpacing: "-0.02em" }}
-          >
-            OpenCERN
-          </h1>
-          <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)" }}>
-            Initial Setup
-          </p>
-        </motion.div>
-      </div>
-
-      {/* Step indicator */}
-      <div className="flex items-center justify-center gap-1 px-12 pb-8">
-        {STEPS.map((s, i) => {
-          const isActive = i === currentIndex;
-          const isDone = i < currentIndex;
-          return (
-            <React.Fragment key={s}>
-              <div className="flex flex-col items-center gap-1.5">
+    <div className="flex-1 flex">
+      {/* Left panel — step indicator */}
+      <div className="w-[200px] shrink-0 flex flex-col px-6 py-8 border-r border-border">
+        <h2 className="text-sm font-semibold text-text-primary mb-8">Setup</h2>
+        <div className="space-y-1">
+          {STEPS.map((s, i) => {
+            const isActive = i === currentIndex;
+            const isDone = i < currentIndex;
+            return (
+              <div key={s} className="flex items-center gap-3 py-2">
                 <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300"
-                  style={{
-                    background: isDone
-                      ? "var(--color-status-running)"
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
+                    isDone
+                      ? "bg-status-running text-bg-base"
                       : isActive
-                      ? "var(--color-accent)"
-                      : "var(--color-bg-surface)",
-                    color: isDone || isActive ? "#fff" : "var(--color-text-tertiary)",
-                    border: !isDone && !isActive ? "1px solid var(--color-border)" : "none",
-                  }}
+                      ? "bg-text-primary text-bg-base"
+                      : "border border-border text-text-tertiary"
+                  }`}
                 >
-                  {isDone ? <Check size={12} /> : i + 1}
+                  {isDone ? <Check size={10} /> : i + 1}
                 </div>
                 <span
-                  className="text-xs transition-colors duration-300"
-                  style={{
-                    color: isActive
-                      ? "var(--color-text-primary)"
+                  className={`text-xs ${
+                    isActive
+                      ? "text-text-primary font-semibold"
                       : isDone
-                      ? "var(--color-text-secondary)"
-                      : "var(--color-text-tertiary)",
-                    fontSize: 10,
-                    fontWeight: isActive ? 600 : 400,
-                  }}
+                      ? "text-text-secondary"
+                      : "text-text-tertiary"
+                  }`}
                 >
                   {STEP_LABELS[i]}
                 </span>
               </div>
-              {i < STEPS.length - 1 && (
-                <div
-                  className="flex-1 h-px mx-2 mb-5 transition-colors duration-300"
-                  style={{
-                    background: i < currentIndex
-                      ? "var(--color-status-running)"
-                      : "var(--color-border)",
-                  }}
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Step content */}
-      <div className="flex-1 flex flex-col px-8">
+      {/* Right panel — step content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-12">
         <AnimatePresence mode="wait">
-          {/* Step 1: Docker check */}
           {step === "docker-check" && (
             <motion.div
               key="docker-check"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="flex-1 flex flex-col"
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm"
             >
-              <div
-                className="rounded-xl p-6 flex-1 flex flex-col"
-                style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)" }}
-              >
-                {checking ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                    <Loader2 size={24} className="animate-spin" style={{ color: "var(--color-accent)" }} />
-                    <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-                      Checking Docker...
-                    </p>
+              {checking ? (
+                <div className="text-center">
+                  <div className="w-4 h-4 border border-white/20 border-t-white/60 rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-xs text-text-secondary">Checking Docker...</p>
+                </div>
+              ) : dockerInstalled && dockerRunning ? (
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 bg-status-running-muted">
+                    <Check size={16} className="text-status-running" />
                   </div>
-                ) : dockerInstalled && dockerRunning ? (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ background: "var(--color-status-running-muted)" }}
-                    >
-                      <Check size={20} style={{ color: "var(--color-status-running)" }} />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
-                        Docker is running
-                      </p>
-                      <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)" }}>
-                        Continuing to download...
-                      </p>
-                    </div>
+                  <p className="text-sm font-medium text-text-primary">Docker is running</p>
+                  <p className="text-xs mt-1 text-text-tertiary">Continuing...</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 bg-status-stopped-muted">
+                    <AlertCircle size={16} className="text-status-stopped" />
                   </div>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center"
-                      style={{ background: "var(--color-status-stopped-muted)" }}
-                    >
-                      <AlertCircle size={20} style={{ color: "var(--color-status-stopped)" }} />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
-                        {!dockerInstalled ? "Docker is not installed" : "Docker is not running"}
-                      </p>
-                      <p className="text-xs mt-1.5 max-w-xs" style={{ color: "var(--color-text-secondary)" }}>
-                        {!dockerInstalled
-                          ? "Docker is required to run OpenCERN services. Please install it and relaunch."
-                          : "Start Docker Desktop and click Retry below."}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-2 w-full max-w-xs mt-2">
-                      {!dockerInstalled && installUrl && (
-                        <a
-                          href={installUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-primary text-center inline-flex items-center justify-center gap-2 text-sm"
-                        >
-                          Download Docker
-                          <ExternalLink size={12} />
-                        </a>
-                      )}
-                      <button onClick={checkDocker} className="btn-secondary w-full text-sm">
-                        Retry
-                      </button>
-                    </div>
+                  <p className="text-sm font-medium text-text-primary">
+                    {!dockerInstalled ? "Docker is not installed" : "Docker is not running"}
+                  </p>
+                  <p className="text-xs mt-1.5 max-w-xs mx-auto text-text-tertiary">
+                    {!dockerInstalled
+                      ? "Docker is required to run OpenCERN services."
+                      : "Please start Docker Desktop and retry."}
+                  </p>
+                  <div className="flex flex-col gap-2 mt-5">
+                    {!dockerInstalled && installUrl && (
+                      <a
+                        href={installUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-text-primary text-bg-base h-8 px-4 text-xs font-medium hover:opacity-85 transition-opacity"
+                      >
+                        Download Docker
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
+                    <Button variant="secondary" onClick={checkDocker} className="w-full">
+                      Retry
+                    </Button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </motion.div>
           )}
 
-          {/* Step 2: Pull images */}
           {step === "pull-images" && (
             <motion.div
               key="pull-images"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="flex-1 flex flex-col"
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm"
             >
-              <div
-                className="rounded-xl p-6 flex-1 flex flex-col"
-                style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)" }}
-              >
-                <div className="text-center mb-5">
-                  <p className="text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
-                    Download Services
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: "var(--color-text-tertiary)" }}>
-                    This will pull the Docker images for all 5 OpenCERN services.
-                  </p>
+              <h3 className="text-sm font-semibold text-center mb-1 text-text-primary">
+                Download Services
+              </h3>
+              <p className="text-xs text-center mb-6 text-text-tertiary">
+                Pull Docker images for all 5 OpenCERN services.
+              </p>
+
+              {pulling || pullComplete ? (
+                <div className="space-y-3">
+                  <ProgressBar
+                    percent={pullProgress?.percent ?? null}
+                    label={pullProgress?.message ?? "Preparing..."}
+                  />
+                  {pullProgress && (
+                    <p className="text-[10px] text-center text-text-tertiary font-mono">
+                      {pullProgress.index + 1} / {pullProgress.total}
+                    </p>
+                  )}
                 </div>
-
-                {pulling || pullComplete ? (
-                  <div className="flex-1 flex flex-col justify-center gap-4">
-                    <ProgressBar
-                      percent={pullProgress?.percent ?? null}
-                      label={pullProgress?.message ?? "Preparing..."}
-                    />
-                    {pullProgress && (
-                      <p className="text-xs text-center" style={{ color: "var(--color-text-tertiary)" }}>
-                        Image {pullProgress.index + 1} of {pullProgress.total}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex-1 flex flex-col justify-center gap-3">
-                    {/* Service list preview */}
-                    <div className="space-y-1.5 mb-3">
-                      {["UI", "API", "XRootD", "Streamer", "Quantum"].map((name) => (
-                        <div
-                          key={name}
-                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
-                          style={{ background: "var(--color-bg-surface)" }}
-                        >
-                          <div
-                            className="w-1.5 h-1.5 rounded-full"
-                            style={{ background: "var(--color-text-tertiary)" }}
-                          />
-                          <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-                            {name}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {pullError && (
-                      <div
-                        className="text-xs p-3 rounded-lg"
-                        style={{ background: "var(--color-status-stopped-muted)", color: "var(--color-status-stopped)" }}
-                      >
-                        {pullError}
-                      </div>
-                    )}
-
-                    <button onClick={startPull} className="btn-primary w-full flex items-center justify-center gap-2">
-                      <Download size={14} />
-                      Download All
-                    </button>
-                    <button
-                      onClick={() => setStep("ready")}
-                      className="text-xs text-center py-1"
-                      style={{ color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer" }}
+              ) : (
+                <div className="space-y-3">
+                  {["UI", "API", "XRootD", "Streamer", "Quantum"].map((name) => (
+                    <div
+                      key={name}
+                      className="flex items-center gap-3 px-3 py-2 rounded-md bg-bg-surface"
                     >
-                      Skip for now
-                    </button>
-                  </div>
-                )}
-              </div>
+                      <div className="w-1.5 h-1.5 rounded-full bg-text-tertiary" />
+                      <span className="text-xs text-text-secondary">{name}</span>
+                    </div>
+                  ))}
+
+                  {pullError && (
+                    <div className="text-xs p-3 rounded-md bg-status-stopped-muted text-status-stopped">
+                      {pullError}
+                    </div>
+                  )}
+
+                  <Button onClick={startPull} className="w-full gap-2">
+                    <Download size={13} />
+                    Download All
+                  </Button>
+                  <button
+                    onClick={() => setStep("ready")}
+                    className="text-xs text-center py-1 w-full text-text-tertiary bg-transparent border-none cursor-pointer hover:text-text-secondary transition-colors"
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
 
-          {/* Step 3: Ready */}
           {step === "ready" && (
             <motion.div
               key="ready"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="flex-1 flex flex-col"
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-sm text-center"
             >
-              <div
-                className="rounded-xl p-6 flex-1 flex flex-col items-center justify-center"
-                style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)" }}
-              >
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                  className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
-                  style={{ background: "var(--color-status-running-muted)" }}
-                >
-                  <Check size={24} style={{ color: "var(--color-status-running)" }} />
-                </motion.div>
-                <h2 className="text-base font-semibold mb-1.5" style={{ color: "var(--color-text-primary)" }}>
-                  Setup Complete
-                </h2>
-                <p className="text-xs text-center max-w-xs mb-6" style={{ color: "var(--color-text-secondary)" }}>
-                  OpenCERN is ready. You can manage all services from the dashboard.
-                </p>
-                <button
-                  onClick={finishSetup}
-                  className="btn-primary w-full max-w-xs flex items-center justify-center gap-2"
-                >
-                  Open Dashboard
-                  <ArrowRight size={14} />
-                </button>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 bg-status-running-muted">
+                <Check size={16} className="text-status-running" />
               </div>
+              <h3 className="text-sm font-semibold mb-1 text-text-primary">
+                Setup Complete
+              </h3>
+              <p className="text-xs mb-6 text-text-tertiary">
+                OpenCERN is ready. Manage services from the dashboard.
+              </p>
+              <Button onClick={finishSetup} className="w-full gap-2">
+                Open Dashboard
+                <ArrowRight size={13} />
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      {/* Bottom spacer */}
-      <div className="h-6" />
     </div>
   );
 }

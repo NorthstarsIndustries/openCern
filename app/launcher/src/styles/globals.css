@@ -1,37 +1,66 @@
 @import "tailwindcss";
 
-/* ─── Custom Theme ──────────────────────────────────────────────────────────── */
+/* ─── Theme ────────────────────────────────────────────────────────────────── */
 
 @theme {
-  --color-bg-base: #101014;
-  --color-bg-elevated: #18181c;
-  --color-bg-surface: #1e1e24;
-  --color-bg-surface-hover: #26262e;
-  --color-bg-surface-active: #2e2e38;
+  --color-bg-base: #050505;
+  --color-bg-elevated: #0a0a0a;
+  --color-bg-surface: #0f0f0f;
+  --color-bg-surface-hover: #161616;
+  --color-bg-surface-active: #1c1c1c;
+  --color-bg-hover: rgba(255, 255, 255, 0.03);
 
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-border-hover: rgba(255, 255, 255, 0.12);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.14);
 
-  --color-text-primary: #f0f0f0;
-  --color-text-secondary: #8b8b96;
-  --color-text-tertiary: #55555f;
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #888888;
+  --color-text-tertiary: #666666;
 
-  --color-accent: #5b5bf0;
-  --color-accent-hover: #6e6ef5;
-  --color-accent-muted: rgba(91, 91, 240, 0.12);
+  --color-accent: #e8e8e8;
+  --color-accent-hover: #ffffff;
+  --color-accent-muted: rgba(255, 255, 255, 0.06);
 
-  --color-status-running: #3dd68c;
-  --color-status-running-muted: rgba(61, 214, 140, 0.12);
-  --color-status-stopped: #e5534b;
-  --color-status-stopped-muted: rgba(229, 83, 75, 0.12);
-  --color-status-pending: #d4a72c;
-  --color-status-pending-muted: rgba(212, 167, 44, 0.12);
+  --color-status-running: #4ade80;
+  --color-status-running-muted: rgba(74, 222, 128, 0.08);
+  --color-status-stopped: #f87171;
+  --color-status-stopped-muted: rgba(248, 113, 113, 0.08);
+  --color-status-pending: #facc15;
+  --color-status-pending-muted: rgba(250, 204, 21, 0.08);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-  --font-mono: "SF Mono", "Fira Code", "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace,
+    monospace;
+
+  --animate-in: enter 0.15s ease-out;
+  --animate-out: exit 0.1s ease-in;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @keyframes exit {
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
-/* ─── Base Styles ───────────────────────────────────────────────────────────── */
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
 
 *,
 *::before,
@@ -55,17 +84,10 @@ body {
   user-select: none;
 }
 
-#root {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── Custom Scrollbar ──────────────────────────────────────────────────────── */
+/* ─── Scrollbar ────────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -73,152 +95,95 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
 }
 
-/* ─── Surface Styles ────────────────────────────────────────────────────────── */
+/* ─── Platform-specific ────────────────────────────────────────────────────── */
 
-.glass {
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
+.mac-hidden {
+  display: none;
 }
 
-.glass-hover:hover {
-  background: var(--color-bg-surface-hover);
-  border-color: var(--color-border-hover);
+body.platform-windows .mac-hidden,
+body.platform-linux .mac-hidden {
+  display: flex;
 }
 
-.glass-subtle {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-}
-
-/* ─── Animations ────────────────────────────────────────────────────────────── */
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.animate-spin-slow {
-  animation: spin-slow 2s linear infinite;
-}
+/* ─── Animations ───────────────────────────────────────────────────────────── */
 
 .animate-fade-in {
   animation: fade-in 0.3s ease-out forwards;
 }
 
-/* ─── Button Styles ─────────────────────────────────────────────────────────── */
+/* ─── Radix animations ─────────────────────────────────────────────────────── */
 
-.btn-primary {
-  background: var(--color-accent);
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
+@keyframes collapsible-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
 }
 
-.btn-primary:hover {
-  background: var(--color-accent-hover);
+@keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
 }
 
-.btn-primary:active {
-  transform: scale(0.98);
+[data-state="open"] > [data-radix-collapsible-content] {
+  animation: collapsible-down 0.15s ease-out;
 }
 
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
+[data-state="closed"] > [data-radix-collapsible-content] {
+  animation: collapsible-up 0.1s ease-in;
+  overflow: hidden;
 }
 
-.btn-secondary {
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 9px 18px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+/* ─── shadcn/ui animation utilities ───────────────────────────────────────── */
+
+@keyframes shadcn-in {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+               scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
 }
 
-.btn-secondary:hover {
-  background: var(--color-bg-surface-hover);
-  border-color: var(--color-border-hover);
+@keyframes shadcn-out {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+               scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
+  }
 }
 
-.btn-secondary:active {
-  background: var(--color-bg-surface-active);
-}
+.animate-in  { animation: shadcn-in 0.15s ease-out; }
+.animate-out { animation: shadcn-out 0.1s ease-in forwards; }
+.fade-in-0   { --tw-enter-opacity: 0; }
+.fade-out-0  { --tw-exit-opacity: 0; }
+.zoom-in-95  { --tw-enter-scale: 0.95; }
+.zoom-in-96  { --tw-enter-scale: 0.96; }
+.zoom-out-95 { --tw-exit-scale: 0.95; }
+.zoom-out-96 { --tw-exit-scale: 0.96; }
 
-.btn-glass {
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
+/* ─── Focus ────────────────────────────────────────────────────────────────── */
 
-.btn-glass:hover {
-  background: var(--color-bg-surface-hover);
-  border-color: var(--color-border-hover);
-}
-
-.btn-glass:active {
-  background: var(--color-bg-surface-active);
-}
-
-.btn-icon {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s ease, background 0.15s ease;
-}
-
-.btn-icon:hover {
-  color: var(--color-text-primary);
-  background: var(--color-bg-surface-hover);
-}
-
-/* ─── Drag Region ───────────────────────────────────────────────────────────── */
-
-[data-tauri-drag-region] {
-  cursor: default;
+:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.25);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, listen } from "../lib/ipc";
 
 export interface LauncherUpdate {
   current_version: string;
@@ -17,18 +16,17 @@ export function useUpdater(dockerSocket: string, dataDir: string) {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
 
-  // Listen for background update events from the Rust backend
+  // Listen for background update events from the Electron main process
   useEffect(() => {
-    const unlisten = listen<UpdateStatus>("update-available", (event) => {
+    const unlistenPromise = listen<UpdateStatus>("update-available", (event) => {
       setUpdateStatus(event.payload);
     });
 
     return () => {
-      unlisten.then((fn) => fn());
+      unlistenPromise.then((fn) => fn());
     };
   }, []);
 
-  // Manual check trigger
   const checkForUpdates = useCallback(async () => {
     setChecking(true);
     try {

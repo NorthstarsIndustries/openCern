@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "../lib/ipc";
 
 export interface PortMapping {
   host: number;
@@ -53,9 +53,7 @@ export function useDocker(dockerSocket: string, dataDir: string) {
       let customContainers: CustomContainerConfig[] = [];
       try {
         customContainers = await invoke<CustomContainerConfig[]>("list_custom_containers");
-      } catch {
-        // Config might not exist yet
-      }
+      } catch {}
 
       const containers = await invoke<ContainerInfo[]>("list_containers", {
         dockerSocket: dockerSocket,
@@ -73,7 +71,6 @@ export function useDocker(dockerSocket: string, dataDir: string) {
     }
   }, [dockerSocket, dataDir]);
 
-  // Poll container status every 3 seconds
   useEffect(() => {
     fetchContainers();
     intervalRef.current = setInterval(fetchContainers, 3000);

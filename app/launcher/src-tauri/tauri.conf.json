@@ -14,12 +14,12 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "OpenCERN Launcher",
-        "width": 540,
-        "height": 720,
+        "title": "OpenCERN",
+        "width": 1060,
+        "height": 680,
         "resizable": true,
-        "minWidth": 480,
-        "minHeight": 600,
+        "minWidth": 860,
+        "minHeight": 520,
         "transparent": true,
         "decorations": false,
         "center": true,

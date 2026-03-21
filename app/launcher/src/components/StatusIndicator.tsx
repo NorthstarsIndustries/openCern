@@ -1,5 +1,3 @@
-import React from "react";
-import { motion } from "framer-motion";
 
 type Status = "running" | "stopped" | "pulling" | "starting" | "error" | "unknown";
 
@@ -9,37 +7,22 @@ interface StatusIndicatorProps {
   showLabel?: boolean;
 }
 
-const statusConfig: Record<Status, { color: string; label: string; animate: boolean }> = {
-  running: {
-    color: "var(--color-status-running)",
-    label: "Running",
-    animate: true,
-  },
-  stopped: {
-    color: "var(--color-status-stopped)",
-    label: "Stopped",
-    animate: false,
-  },
-  pulling: {
-    color: "var(--color-status-pending)",
-    label: "Pulling",
-    animate: true,
-  },
-  starting: {
-    color: "var(--color-status-pending)",
-    label: "Starting",
-    animate: true,
-  },
-  error: {
-    color: "var(--color-status-stopped)",
-    label: "Error",
-    animate: false,
-  },
-  unknown: {
-    color: "var(--color-text-tertiary)",
-    label: "Unknown",
-    animate: false,
-  },
+const statusConfig: Record<Status, { color: string; label: string }> = {
+  running: { color: "bg-status-running", label: "Running" },
+  stopped: { color: "bg-status-stopped", label: "Stopped" },
+  pulling: { color: "bg-status-pending", label: "Pulling" },
+  starting: { color: "bg-status-pending", label: "Starting" },
+  error: { color: "bg-status-stopped", label: "Error" },
+  unknown: { color: "bg-text-tertiary", label: "Unknown" },
+};
+
+const statusTextConfig: Record<Status, string> = {
+  running: "text-status-running",
+  stopped: "text-status-stopped",
+  pulling: "text-status-pending",
+  starting: "text-status-pending",
+  error: "text-status-stopped",
+  unknown: "text-text-tertiary",
 };
 
 export function mapStateToStatus(state: string): Status {
@@ -61,32 +44,20 @@ export function mapStateToStatus(state: string): Status {
 
 export default function StatusIndicator({
   status,
-  size = 8,
+  size = 6,
   showLabel = false,
 }: StatusIndicatorProps) {
   const config = statusConfig[status];
+  const textClass = statusTextConfig[status];
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="relative" style={{ width: size, height: size }}>
-        {config.animate && (
-          <motion.div
-            animate={{ scale: [1, 1.6, 1], opacity: [0.5, 0, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 rounded-full"
-            style={{ background: config.color, opacity: 0.3 }}
-          />
-        )}
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{ background: config.color }}
-        />
-      </div>
+    <div className="flex items-center gap-1.5">
+      <div
+        className={`rounded-full ${config.color}`}
+        style={{ width: size, height: size }}
+      />
       {showLabel && (
-        <span
-          className="text-xs font-medium"
-          style={{ color: config.color }}
-        >
+        <span className={`text-[10px] font-medium ${textClass}`}>
           {config.label}
         </span>
       )}
