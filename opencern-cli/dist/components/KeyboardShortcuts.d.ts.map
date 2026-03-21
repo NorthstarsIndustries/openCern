@@ -1,0 +1,1 @@
+{"version":3,"file":"KeyboardShortcuts.d.ts","sourceRoot":"","sources":["../../src/components/KeyboardShortcuts.tsx"],"names":[],"mappings":"AAGA,OAAO,KAAK,MAAM,OAAO,CAAC;AAG1B,UAAU,sBAAsB;IAC9B,OAAO,EAAE,MAAM,IAAI,CAAC;CACrB;AAoDD,wBAAgB,iBAAiB,CAAC,EAAE,OAAO,EAAE,EAAE,sBAAsB,GAAG,KAAK,CAAC,GAAG,CAAC,OAAO,CAyBxF;AAED,eAAe,iBAAiB,CAAC"}

@@ -28,7 +28,7 @@ function renderHistogram(histogram: Record<string, number>): React.ReactNode {
         const bar = '█'.repeat(barLen) + '░'.repeat(20 - barLen);
         return (
           <Box key={state} flexDirection="row" gap={1}>
-            <Text color="cyan">|{state.padEnd(6)}⟩</Text>
+            <Text color="cyan">|{state.padEnd(6)}{'>'}</Text>
             <Text color="blue">{bar}</Text>
             <Text color="white">{pct.toFixed(1)}%</Text>
           </Box>
@@ -75,7 +75,7 @@ export function QuantumPanel({ job, isRunning, backend, circuitDiagram }: Quantu
   return (
     <Box flexDirection="column" borderStyle="single" borderColor="blue" paddingX={1} gap={0}>
       <Box flexDirection="row" gap={2}>
-        <Text bold color="blue">⚛ Quantum Analysis</Text>
+        <Text bold color="blue">[qc] Quantum Analysis</Text>
         <Text color="gray">Backend: </Text>
         <Text color="cyan">{backend || job?.backend || 'local'}</Text>
         {job?.queuePosition !== undefined && job.queuePosition > 0 && (

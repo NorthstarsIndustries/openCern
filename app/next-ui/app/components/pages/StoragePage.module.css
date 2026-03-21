@@ -1,0 +1,471 @@
+/* StoragePage — Local Storage management UI */
+
+/* ── Layout ──────────────────────────────────────────── */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--oc-bg-app);
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--oc-border-subtle);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--oc-text-primary);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--oc-text-secondary);
+  margin: 0;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── File list panel ─────────────────────────────────── */
+
+.fileList {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 16px 28px 28px;
+}
+
+/* ── Empty state ─────────────────────────────────────── */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 64px 24px;
+  margin-top: 24px;
+  border: 1.5px dashed var(--oc-border);
+  border-radius: var(--oc-radius-lg);
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--oc-text-muted);
+  opacity: 0.6;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--oc-text-secondary);
+  margin: 0;
+}
+
+.emptyHint {
+  font-size: 12px;
+  color: var(--oc-text-muted);
+  margin: 0;
+}
+
+/* ── File row ────────────────────────────────────────── */
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 2px;
+  border-radius: var(--oc-radius-md);
+  background: var(--oc-bg-card);
+  border: 1px solid var(--oc-border-subtle);
+  transition: background var(--oc-transition), border-color var(--oc-transition);
+  cursor: default;
+}
+
+.fileRow:hover {
+  background: var(--oc-bg-elevated);
+  border-color: var(--oc-border);
+}
+
+.expandBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--oc-radius-sm, 4px);
+  background: transparent;
+  color: var(--oc-text-muted);
+  cursor: pointer;
+  transition: color var(--oc-transition), background var(--oc-transition), transform var(--oc-transition);
+  flex-shrink: 0;
+}
+
+.expandBtn:hover {
+  color: var(--oc-text-secondary);
+  background: var(--oc-bg-hover);
+}
+
+.expandBtnOpen {
+  transform: rotate(90deg);
+}
+
+.expandPlaceholder {
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.fileIcon {
+  color: var(--oc-text-muted);
+  flex-shrink: 0;
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--oc-font-mono);
+  font-size: 12.5px;
+  color: var(--oc-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileSize {
+  font-size: 11px;
+  color: var(--oc-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--oc-font-mono);
+}
+
+.fileActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+/* ── Process button states ───────────────────────────── */
+
+.processBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: var(--oc-radius-md);
+  border: 1px solid var(--oc-border);
+  background: transparent;
+  color: var(--oc-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--oc-transition);
+  line-height: 1;
+}
+
+.processBtn:hover {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+  border-color: var(--oc-border-strong);
+}
+
+.processBtnActive {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: var(--oc-blue-light);
+  cursor: default;
+  pointer-events: none;
+}
+
+.processBtnDone {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: var(--oc-success);
+  cursor: default;
+}
+
+.processBtnError {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: var(--oc-error);
+  cursor: pointer;
+}
+
+.processBtnError:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.spinIcon {
+  animation: oc-spin 1s linear infinite;
+}
+
+@keyframes oc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Icon button (reveal / delete) ───────────────────── */
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--oc-radius-md);
+  background: transparent;
+  color: var(--oc-text-muted);
+  cursor: pointer;
+  transition: all var(--oc-transition);
+}
+
+.iconBtn:hover {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-secondary);
+}
+
+.iconBtnDanger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--oc-error);
+}
+
+/* ── Expanded sub-row ────────────────────────────────── */
+
+.subRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 2px 22px;
+  padding: 9px 14px 9px 16px;
+  border-left: 2px solid var(--oc-blue-light);
+  background: var(--oc-bg-card);
+  border-radius: 0 var(--oc-radius-md) var(--oc-radius-md) 0;
+  animation: subRowIn 150ms ease;
+}
+
+@keyframes subRowIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.subFileName {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--oc-font-mono);
+  font-size: 12px;
+  color: var(--oc-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.subBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  border-radius: var(--oc-radius-md);
+  border: 1px solid var(--oc-border);
+  background: transparent;
+  color: var(--oc-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--oc-transition);
+}
+
+.subBtn:hover {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+  border-color: var(--oc-border-strong);
+}
+
+.subBtnPrimary {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.25);
+  color: var(--oc-blue-light);
+}
+
+.subBtnPrimary:hover {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+/* ── Inspector sidebar ───────────────────────────────── */
+
+.inspector {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--oc-bg-card);
+  border-left: 1px solid var(--oc-border-subtle);
+  animation: inspectorSlideIn 200ms ease;
+  overflow: hidden;
+}
+
+@keyframes inspectorSlideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.inspectorHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--oc-border-subtle);
+  flex-shrink: 0;
+}
+
+.inspectorTitle {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--oc-font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--oc-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inspectorClose {
+  composes: iconBtn;
+}
+
+.inspectorClose:hover {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+}
+
+/* ── Inspector metadata ──────────────────────────────── */
+
+.inspectorMeta {
+  display: flex;
+  gap: 1px;
+  padding: 0;
+  flex-shrink: 0;
+  background: var(--oc-border-subtle);
+  border-bottom: 1px solid var(--oc-border-subtle);
+}
+
+.metaItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
+  background: var(--oc-bg-card);
+}
+
+.metaLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--oc-text-muted);
+  font-weight: 600;
+}
+
+.metaValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--oc-text-primary);
+  font-family: var(--oc-font-mono);
+}
+
+/* ── Inspector editor ────────────────────────────────── */
+
+.inspectorEditor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.inspectorLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--oc-text-muted);
+  font-size: 12px;
+}
+
+/* ── Inspector pagination footer ─────────────────────── */
+
+.inspectorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--oc-border-subtle);
+  flex-shrink: 0;
+}
+
+.pageInfo {
+  font-size: 11px;
+  color: var(--oc-text-muted);
+  font-family: var(--oc-font-mono);
+}
+
+.pageButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.pageBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--oc-radius-md);
+  border: 1px solid var(--oc-border);
+  background: transparent;
+  color: var(--oc-text-secondary);
+  cursor: pointer;
+  transition: all var(--oc-transition);
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--oc-bg-hover);
+  color: var(--oc-text-primary);
+  border-color: var(--oc-border-strong);
+}
+
+.pageBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

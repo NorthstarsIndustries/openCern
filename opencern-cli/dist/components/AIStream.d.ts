@@ -14,5 +14,6 @@ interface AIStreamProps {
     thinkingText?: string;
 }
 export declare function AIStream({ tokens, isStreaming, onCancel, model, tokenCount, latency, pendingTool, toolResults, onApprove, onDeny, thinkingText, }: AIStreamProps): React.JSX.Element;
-export default AIStream;
+declare const _default: React.MemoExoticComponent<typeof AIStream>;
+export default _default;
 //# sourceMappingURL=AIStream.d.ts.map

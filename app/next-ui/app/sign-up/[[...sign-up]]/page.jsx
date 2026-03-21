@@ -224,8 +224,8 @@ export default function CustomSignUp() {
               </div>
               <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#ffffff', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>Identity Verification</h2>
               <p style={{ color: '#9ca3af', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
-                We've transmitted a specialized single-use code to <strong style={{ color: '#e5e7eb', fontWeight: 500 }}>{emailAddress}</strong>. Enter it below to validate your environment.
-              </p>
+              We&apos;ve transmitted a specialized single-use code to <strong style={{ color: '#e5e7eb', fontWeight: 500 }}>{emailAddress}</strong>. Enter it below to validate your environment.
+            </p>
             </div>
 
             <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>

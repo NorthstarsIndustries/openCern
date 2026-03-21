@@ -13,16 +13,11 @@ export interface Dataset {
     year: number;
     energy: string;
     size: number;
-    files: DatasetFile[];
-}
-export interface DatasetFile {
-    name: string;
-    size: number;
-    url: string;
+    files: string[];
 }
 export interface DownloadStatus {
     id: string;
-    status: 'pending' | 'downloading' | 'complete' | 'error';
+    status: 'pending' | 'downloading' | 'extracting' | 'done' | 'error' | 'cancelled';
     progress: number;
     speed: number;
     eta: number;
@@ -30,7 +25,7 @@ export interface DownloadStatus {
 }
 export interface ProcessStatus {
     id: string;
-    status: 'pending' | 'processing' | 'complete' | 'error';
+    status: 'pending' | 'processing' | 'processed' | 'merging' | 'error' | 'idle';
     progress: number;
     currentFile?: string;
     results?: ProcessResults;

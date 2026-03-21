@@ -5,36 +5,7 @@ import React, { useState, useCallback } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { getPrevious, getNext, resetCursor } from '../utils/history.js';
-
-interface Command {
-  name: string;
-  description: string;
-}
-
-const COMMANDS: Command[] = [
-  { name: '/ask',      description: 'Ask AI a physics question' },
-  { name: '/auth',     description: 'Authentication commands' },
-  { name: '/clear',    description: 'Clear the screen' },
-  { name: '/config',   description: 'Configure settings and API keys' },
-  { name: '/doctor',   description: 'Run system diagnostics' },
-  { name: '/download', description: 'Download CERN Open Data datasets' },
-  { name: '/exit',     description: 'Exit OpenCERN CLI' },
-  { name: '/help',     description: 'Show available commands' },
-  { name: '/history',  description: 'Show command history' },
-  { name: '/keys',     description: 'Manage API keys' },
-  { name: '/login',    description: 'Sign in to OpenCERN' },
-  { name: '/logout',   description: 'Sign out of OpenCERN' },
-  { name: '/model',    description: 'Show or switch active model' },
-  { name: '/models',   description: 'List available Claude models' },
-  { name: '/open',     description: 'Open a data file (JSON or ROOT)' },
-  { name: '/opask',    description: 'Open a file and ask AI about it' },
-  { name: '/process',  description: 'Process a ROOT file' },
-  { name: '/quantum',  description: 'Run quantum classification' },
-  { name: '/status',   description: 'Show system status' },
-  { name: '/update',   description: 'Check for and apply updates' },
-  { name: '/usage',    description: 'Show session token usage stats' },
-  { name: '/viz',      description: 'Visualise a dataset' },
-];
+import { registry, type CommandDef } from '../commands/registry.js';
 
 interface PromptProps {
   onSubmit: (input: string) => void;
@@ -47,10 +18,11 @@ export function PromptComponent({ onSubmit, disabled = false, placeholder }: Pro
   const [completionIndex, setCompletionIndex] = useState(0);
 
   const inCommandMode = value.startsWith('/');
-  const completions = inCommandMode
-    ? COMMANDS.filter(c => c.name.startsWith(value.split(' ')[0]))
+  const commandPart = value.split(' ')[0];
+  const completions: CommandDef[] = inCommandMode
+    ? registry.getCompletions(commandPart)
     : [];
-  const showCompletions = completions.length > 0 && value.split(' ').length === 1;
+  const showCompletions = completions.length > 0 && value.split(' ').length === 1 && commandPart.length > 1;
 
   const handleChange = useCallback((val: string) => {
     setValue(val);
@@ -95,41 +67,40 @@ export function PromptComponent({ onSubmit, disabled = false, placeholder }: Pro
     }
   });
 
-  const visibleCompletions = completions.slice(0, 6);
+  const visibleCompletions = completions.slice(0, 8);
+  // Dynamic height: 3 when no completions, grows with completions
+  const minH = showCompletions ? 3 + visibleCompletions.length + 2 : 3;
 
   return (
-    <Box flexDirection="column" width="100%">
+    <Box flexDirection="column" width="100%" minHeight={minH} justifyContent="flex-end">
       {showCompletions && (
-        <Box 
-          flexDirection="column" 
-          marginBottom={1} 
-          borderStyle="single" 
+        <Box
+          flexDirection="column"
+          marginBottom={0}
           paddingX={1}
-          width="50%"
         >
-          <Box marginBottom={1}>
-             <Text bold> AVAILABLE COMMANDS</Text>
-          </Box>
           {visibleCompletions.map((cmd, i) => {
             const selected = i === completionIndex;
             return (
               <Box key={cmd.name} flexDirection="row" gap={1}>
-                {selected ? <Text bold> {'>'} </Text> : <Text>   </Text>}
+                {selected ? <Text bold color="cyan">{'>'}</Text> : <Text> </Text>}
                 {selected ? (
-                   <Text color="black" backgroundColor="white" bold> {cmd.name.padEnd(10)} </Text>
+                   <Text color="cyan" bold>{cmd.name.padEnd(14)}</Text>
                 ) : (
-                   <Text> {cmd.name.padEnd(10)} </Text>
+                   <Text>{cmd.name.padEnd(14)}</Text>
                 )}
-                <Text dimColor={!selected}>
-                  {cmd.description}
-                </Text>
+                <Text dimColor={!selected}>{cmd.description}</Text>
+                {cmd.shortcut && <Text dimColor color="gray"> ({cmd.shortcut})</Text>}
               </Box>
             );
           })}
+          {completions.length > 8 && (
+            <Text dimColor>  ... {completions.length - 8} more</Text>
+          )}
         </Box>
       )}
       <Box flexDirection="row" alignItems="center">
-        <Text bold>{'> '}</Text>
+        <Text bold color="cyan">opencern {'>'} </Text>
         {disabled ? (
           <Text dimColor italic>{placeholder || 'Processing...'}</Text>
         ) : (

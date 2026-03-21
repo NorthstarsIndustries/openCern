@@ -1,4 +1,4 @@
-name: Docker Publish
+name: Docker Publish (autotest)
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
       matrix:
         service:
           - name: api
-            context: containers/api
+            context: .
             dockerfile: containers/api/Dockerfile
           - name: xrootd
             context: containers/xrootd

@@ -10,9 +10,45 @@ import { config } from '../utils/config.js';
 import { getToken } from '../utils/auth.js';
 function normalizeError(err) {
     if (err instanceof AxiosError) {
-        const msg = err.response?.data?.detail || err.response?.data?.message || err.message;
         const code = err.response?.status;
         const retryable = !code || code >= 500 || code === 429;
+        let msg;
+        if (err.code === 'ECONNREFUSED') {
+            msg = 'API not running. Start containers with /status or check Docker.';
+        }
+        else if (err.code === 'ETIMEDOUT' || err.code === 'ECONNABORTED') {
+            msg = 'API timed out. The server may be overloaded or unresponsive.';
+        }
+        else if (err.code === 'ENOTFOUND') {
+            msg = 'API host not found. Check your apiBaseUrl in /config.';
+        }
+        else if (code === 401) {
+            msg = 'Unauthorized. Run /login to authenticate.';
+        }
+        else if (code === 403) {
+            msg = 'Forbidden. Your account may lack permission for this action.';
+        }
+        else if (code === 404) {
+            msg = 'Endpoint not found. The API version may be incompatible — try /update.';
+        }
+        else if (code === 422) {
+            const detail = err.response?.data?.detail;
+            if (Array.isArray(detail)) {
+                msg = `Validation error: ${detail.map((d) => d.msg || JSON.stringify(d)).join('; ')}`;
+            }
+            else {
+                msg = `Validation error: ${detail || 'invalid request parameters'}`;
+            }
+        }
+        else if (code === 429) {
+            msg = 'Rate limited. Wait a moment and try again.';
+        }
+        else if (code && code >= 500) {
+            msg = `Server error (${code}). The API encountered an internal problem.`;
+        }
+        else {
+            msg = err.response?.data?.detail || err.response?.data?.message || err.message;
+        }
         const error = new Error(msg);
         error.code = code;
         error.retryable = retryable;
@@ -76,16 +112,18 @@ export const cernApi = {
     },
     async startDownload(dataset, selectedFiles) {
         return withRetry(async () => {
-            const files = selectedFiles && selectedFiles.length > 0 ? selectedFiles : dataset.files.map(f => f.url);
+            const files = selectedFiles && selectedFiles.length > 0 ? selectedFiles : dataset.files;
             const res = await createClient().post('/download/multi', {
                 dataset_title: dataset.title,
                 files
             });
-            return res.data;
+            // Server returns { folder, files: [{ track_key }] } — use first track_key as poll ID
+            const trackKey = res.data.files?.[0]?.track_key || res.data.folder || res.data.id;
+            return { id: trackKey };
         });
     },
     async downloadStatus(id) {
-        const res = await createClient().get('/download/status', { params: { folder: id } });
+        const res = await createClient().get('/download/status', { params: { filename: id } });
         return res.data;
     },
     async cancelDownload(id) {
@@ -103,18 +141,34 @@ export const cernApi = {
     },
     async processFile(filePath) {
         return withRetry(async () => {
-            const res = await createClient().post('/process', { file: filePath });
-            return res.data;
+            // Strip absolute path to get relative to DATA_DIR, or just use basename
+            let relative = filePath.replace(/^~?\/.*\/opencern-datasets\/data\//, '');
+            // If still looks absolute, just use the basename
+            if (relative.startsWith('/'))
+                relative = relative.split('/').pop() || relative;
+            const res = await createClient().post('/process', null, {
+                params: { filename: relative },
+            });
+            if (res.data.error)
+                throw new Error(res.data.error);
+            return { id: res.data.id || relative };
         });
     },
     async processFolder(folderPath) {
         return withRetry(async () => {
-            const res = await createClient().post('/process/folder', { folder: folderPath });
-            return res.data;
+            let relative = folderPath.replace(/^~?\/.*\/opencern-datasets\/data\//, '');
+            if (relative.startsWith('/'))
+                relative = relative.split('/').pop() || relative;
+            const res = await createClient().post('/process/folder', null, {
+                params: { folder: relative },
+            });
+            if (res.data.error)
+                throw new Error(res.data.error);
+            return { id: res.data.id || relative };
         });
     },
     async processStatus(id) {
-        const res = await createClient().get('/process/status', { params: { id } });
+        const res = await createClient().get('/process/status', { params: { filename: id } });
         return res.data;
     },
     async getRootMetadata(filePath) {

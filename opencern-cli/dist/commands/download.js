@@ -17,7 +17,7 @@ export async function pollDownload(id, onProgress) {
     while (true) {
         const status = await cernApi.downloadStatus(id);
         onProgress(status);
-        if (status.status === 'complete' || status.status === 'error') {
+        if (status.status === 'done' || status.status === 'error' || status.status === 'cancelled') {
             return status;
         }
         await new Promise(r => setTimeout(r, 1000));

@@ -9,6 +9,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getKey } from '../utils/keystore.js';
 import { config } from '../utils/config.js';
 import { execute, estimateResources } from './executor.js';
+import { buildSystemPrompt as buildCernPrompt } from './aiSystemPrompt.js';
 // ─── Tool Definitions ────────────────────────────────────────────────
 const TOOLS = [
     {
@@ -74,23 +75,7 @@ let _usage = {
     toolCalls: 0,
     sessionStart: Date.now(),
 };
-// ─── System Prompt ───────────────────────────────────────────────────
-const SYSTEM_PROMPT = `You are a particle physics analysis assistant integrated into OpenCERN,
-an open-source CERN data analysis platform. You have deep expertise in:
-- Particle physics: Standard Model, LHC experiments (CMS, ATLAS, ALICE, LHCb)
-- Data formats: ROOT files, HEP data formats, CERN Open Data Portal
-- Analysis techniques: event selection, kinematic variables (pT, eta, phi, HT), invariant mass
-- Quantum computing applications in HEP: VQC classifiers, quantum ML for event classification
-- Statistics: significance, p-values, systematic uncertainties
-
-You have access to tools for executing Python code, bash commands, and OpenCERN CLI operations.
-Use tools when the user needs data analysis, computation, or file operations.
-Always explain your reasoning before using a tool.
-
-When analyzing data, use proper physics notation and terminology.
-Reference real papers and CERN documentation when relevant.
-Suggest concrete next analysis steps.
-Be concise but technically precise.`;
+// ─── System Prompt (uses comprehensive CERN-AI prompt) ───────────
 // ─── Client Management ───────────────────────────────────────────────
 function getClient() {
     if (!_client) {
@@ -103,20 +88,16 @@ function getClient() {
     return _client;
 }
 function buildSystemPrompt() {
-    let system = SYSTEM_PROMPT;
-    if (_context.experiment) {
-        system += `\n\nCurrent session context:\n- Experiment: ${_context.experiment}`;
-    }
-    if (_context.downloadedDatasets?.length) {
-        system += `\n- Downloaded datasets: ${_context.downloadedDatasets.join(', ')}`;
-    }
-    if (_context.processedFiles?.length) {
-        system += `\n- Processed files: ${_context.processedFiles.join(', ')}`;
-    }
-    if (_context.lastResults) {
-        system += `\n- Last processing results: ${JSON.stringify(_context.lastResults, null, 2)}`;
-    }
-    return system;
+    const sessionCtx = {};
+    if (_context.experiment)
+        sessionCtx.experiment = _context.experiment;
+    if (_context.downloadedDatasets?.length)
+        sessionCtx.downloadedDatasets = _context.downloadedDatasets;
+    if (_context.processedFiles?.length)
+        sessionCtx.processedFiles = _context.processedFiles;
+    if (_context.lastResults)
+        sessionCtx.lastResults = _context.lastResults;
+    return buildCernPrompt(sessionCtx);
 }
 // ─── Tool Execution ──────────────────────────────────────────────────
 export async function executeToolCall(toolCall) {
