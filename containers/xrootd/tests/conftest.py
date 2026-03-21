@@ -15,7 +15,12 @@ try:
 except Exception:
     HAS_DEPS = False
 
-skip_no_deps = pytest.mark.skipif(not HAS_DEPS, reason="FastAPI or app dependencies unavailable")
+
+def pytest_collection_modifyitems(items):
+    if not HAS_DEPS:
+        skip = pytest.mark.skip(reason="FastAPI or app dependencies unavailable")
+        for item in items:
+            item.add_marker(skip)
 
 
 @pytest.fixture()

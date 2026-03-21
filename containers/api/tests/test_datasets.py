@@ -3,9 +3,6 @@ Tests for the /datasets endpoint.
 """
 import pytest
 from unittest.mock import patch, AsyncMock
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 MOCK_CATALOG = {
     "datasets": [{"id": "1", "title": "CMS Run2"}],
