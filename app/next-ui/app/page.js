@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import dynamic from 'next/dynamic';
-import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { buildSystemPrompt } from './aiSystemPrompt';
 import './AIChat.css';
 import AppShell from './components/layout/AppShell';

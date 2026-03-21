@@ -1,7 +1,36 @@
 'use client';
 import React, { useState, useCallback, useEffect } from 'react';
-import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 import { useIsElectron } from '../../ConvexClientProvider';
+
+// Dynamically import Clerk components to avoid SSR/prerender errors when
+// ClerkProvider is not mounted (e.g. missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+// during Docker builds).
+import dynamic from 'next/dynamic';
+const ClerkUI = dynamic(() =>
+  import('@clerk/nextjs').then(mod => {
+    const { SignInButton, SignedIn, SignedOut, UserButton } = mod;
+    function ClerkAuthBlock() {
+      return (
+        <>
+          <SignedOut>
+            <div style={{
+              background: 'var(--oc-blue-light)', color: '#fff',
+              padding: '4px 14px', borderRadius: 'var(--oc-radius-md)',
+              fontSize: 'var(--oc-text-sm)', fontWeight: 500, cursor: 'pointer',
+            }}>
+              <SignInButton />
+            </div>
+          </SignedOut>
+          <SignedIn>
+            <UserButton appearance={{ elements: { userButtonAvatarBox: 'w-7 h-7' } }} />
+          </SignedIn>
+        </>
+      );
+    }
+    return { default: ClerkAuthBlock };
+  }),
+  { ssr: false }
+);
 import {
   IconSearch, IconFolder, IconFile, IconEye, IconAI, IconSettings,
   IconDownload, IconBell, IconCommand, IconX, IconPause, IconPlay,
@@ -186,22 +215,7 @@ export default function AppShell({
               <kbd style={{ fontSize: 10, opacity: 0.6 }}>⌘K</kbd>
             </button>
             <span className={s.versionBadge}>v0.2.0</span>
-            {!electron && (
-              <>
-                <SignedOut>
-                  <div style={{
-                    background: 'var(--oc-blue-light)', color: '#fff',
-                    padding: '4px 14px', borderRadius: 'var(--oc-radius-md)',
-                    fontSize: 'var(--oc-text-sm)', fontWeight: 500, cursor: 'pointer',
-                  }}>
-                    <SignInButton />
-                  </div>
-                </SignedOut>
-                <SignedIn>
-                  <UserButton appearance={{ elements: { userButtonAvatarBox: 'w-7 h-7' } }} />
-                </SignedIn>
-              </>
-            )}
+            {!electron && <ClerkUI />}
           </div>
         </div>
 
