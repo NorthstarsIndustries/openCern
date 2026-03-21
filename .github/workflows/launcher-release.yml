@@ -16,12 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            platform: mac
-            args: --mac --arm64
-          - os: macos-latest
-            platform: mac-x64
-            args: --mac --x64
           - os: ubuntu-latest
             platform: linux
             args: --linux
@@ -60,8 +54,6 @@ jobs:
         with:
           name: launcher-${{ matrix.platform }}
           path: |
-            app/launcher/release/*.dmg
-            app/launcher/release/*.zip
             app/launcher/release/*.AppImage
             app/launcher/release/*.deb
             app/launcher/release/*.exe

@@ -1,0 +1,105 @@
+name: macOS Launcher Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac-launcher:
+    name: Build Native macOS Launcher
+    runs-on: macos-latest
+
+    defaults:
+      run:
+        working-directory: app/launcher-mac
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy splash video to resources
+        run: cp ../launcher/public/collision.mp4 OpenCERN/Resources/collision.mp4
+
+      - name: Resolve SPM dependencies
+        run: swift package resolve
+
+      - name: Build release archive
+        run: |
+          xcodebuild archive \
+            -scheme OpenCERN \
+            -configuration Release \
+            -archivePath build/OpenCERN.xcarchive \
+            -destination "generic/platform=macOS" \
+            CODE_SIGN_IDENTITY="${{ secrets.APPLE_DEVELOPER_ID }}" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp"
+
+      - name: Export archive
+        run: |
+          cat > ExportOptions.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>developer-id</string>
+              <key>teamID</key>
+              <string>${{ secrets.APPLE_TEAM_ID }}</string>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath build/OpenCERN.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist ExportOptions.plist
+
+      - name: Create DMG
+        run: |
+          mkdir -p build/dmg
+          cp -R build/export/OpenCERN.app build/dmg/
+          ln -s /Applications build/dmg/Applications
+          hdiutil create -volname "OpenCERN" -srcfolder build/dmg -ov -format UDZO build/OpenCERN-macOS.dmg
+
+      - name: Notarize DMG
+        run: |
+          xcrun notarytool submit build/OpenCERN-macOS.dmg \
+            --apple-id "${{ secrets.APPLE_ID }}" \
+            --password "${{ secrets.APPLE_APP_PASSWORD }}" \
+            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --wait
+
+          xcrun stapler staple build/OpenCERN-macOS.dmg
+
+      - name: Generate Sparkle appcast
+        run: |
+          SPARKLE_BIN=$(swift package --package-path . show-dependencies --format json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('path',''))" 2>/dev/null || echo "")
+          if [ -n "$SPARKLE_BIN" ] && [ -f "$SPARKLE_BIN/bin/generate_appcast" ]; then
+            "$SPARKLE_BIN/bin/generate_appcast" \
+              --ed-key-file <(echo "${{ secrets.SPARKLE_ED_KEY }}") \
+              build/
+          else
+            echo "Sparkle generate_appcast not found, skipping appcast generation"
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-mac-native
+          path: |
+            app/launcher-mac/build/OpenCERN-macOS.dmg
+            app/launcher-mac/build/appcast.xml
+          if-no-files-found: warn
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          tag_name: ${{ github.ref_name }}
+          files: |
+            app/launcher-mac/build/OpenCERN-macOS.dmg
+            app/launcher-mac/build/appcast.xml
