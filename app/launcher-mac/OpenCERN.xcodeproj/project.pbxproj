@@ -1,0 +1,490 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00350E5976422F81238830BA /* SetupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5ECE2C96FF2C865D3CD39A5 /* SetupViewModel.swift */; };
+		0A71716AE13F20A037C67C14 /* ServiceDefinitions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B78B8F138DD0A7B7089A65E /* ServiceDefinitions.swift */; };
+		16E9301B110B18EA6CC3BA2E /* CustomContainerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A0844A16FA4CA90BB7F7959 /* CustomContainerConfig.swift */; };
+		2EF54506ACE258138C9195F3 /* OpenCERNApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF36DD19ADA8ED6433A4B32 /* OpenCERNApp.swift */; };
+		31C7A9307FB14BAD3E5AC3E9 /* LogViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08BDC7BC9A01FB819BB07AFD /* LogViewerView.swift */; };
+		3ADD90681E66F6F33EB903E4 /* StatusDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49137BAAEE11420A11684367 /* StatusDot.swift */; };
+		45556C911DBE9F139222D512 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C40D5E5527FC4F97EE923FE /* Colors.swift */; };
+		477BDA4BC48F4F319AF4BA2A /* ConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C7FBF56D405D0E8DC2216B1 /* ConfigService.swift */; };
+		4FFA0785E24942CB1058001C /* UpdateStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65D04484D9ADC69139283C5 /* UpdateStatus.swift */; };
+		65237C4FCC911952F075DBF3 /* DockerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0205DB6B40DD5F271A2A52E3 /* DockerViewModel.swift */; };
+		6918338FC5BBF8E36D31350A /* ProgressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6106D84C28D2EE2AD9BE326 /* ProgressBarView.swift */; };
+		6DA390A7E9F14A7EF71DA5DD /* DockerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3904DACB9AF0778483FDFB43 /* DockerService.swift */; };
+		77E4183A6A7E4A86D4BF1F27 /* SettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CA731158DFBA27B9CFFDC49 /* SettingsViewModel.swift */; };
+		7B231E20E11585F29652CC66 /* DockerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 882C74740B5EA9AD74E03B5C /* DockerClient.swift */; };
+		8311F5480F66B6EC0FAD03ED /* AddContainerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEED35185B823E8B03479325 /* AddContainerSheet.swift */; };
+		83A19964F6BA47633CCEBEDA /* CustomContainersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A76886611EAE8CDA51CEECD /* CustomContainersView.swift */; };
+		886719C26E0B6586913624B0 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B3FB4D1C6AEE5C79F1C766 /* AppDelegate.swift */; };
+		8B3804099DA392E1799B6AAB /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12E355A1FE1EDEF6B841C1C9 /* DashboardView.swift */; };
+		92F29B7A96D8B0146AB5331E /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED92664A076BE53888CDA169 /* SplashView.swift */; };
+		98E82C720622489B900BBE2C /* LauncherConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5924C5BB34CA3AC1EB55D679 /* LauncherConfig.swift */; };
+		BAEC79F63A4FC9D6BD7D99C2 /* UpdateService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC56472B89A070E8328A2E85 /* UpdateService.swift */; };
+		C6D04957BE641AA09387D784 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDA1148554BF9F0159B1AE6 /* SettingsView.swift */; };
+		C6E0BD21B9852A7434312277 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 6DDAFED56F1A85B8FDA4A43F /* Sparkle */; };
+		C8614C157EDED26D700E735F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD92211DB43F093A0A5CBC72 /* ContentView.swift */; };
+		EA383A526BCB054989566B6B /* ContainerCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A5EB8171B799DCA44F996A5 /* ContainerCardView.swift */; };
+		F4B3796FECC3778F6EE190BC /* ContainerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2049083CCB6A22E9C87444C /* ContainerInfo.swift */; };
+		FB0DF148474BE533C793688A /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02527DAEA20BB66BC3476E76 /* SetupView.swift */; };
+		FC59627732E47F84BCA7C22D /* UpdateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D8E9A137811E9358886C39 /* UpdateViewModel.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0205DB6B40DD5F271A2A52E3 /* DockerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockerViewModel.swift; sourceTree = "<group>"; };
+		02527DAEA20BB66BC3476E76 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		08BDC7BC9A01FB819BB07AFD /* LogViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogViewerView.swift; sourceTree = "<group>"; };
+		12E355A1FE1EDEF6B841C1C9 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		1A5EB8171B799DCA44F996A5 /* ContainerCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerCardView.swift; sourceTree = "<group>"; };
+		3904DACB9AF0778483FDFB43 /* DockerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockerService.swift; sourceTree = "<group>"; };
+		49137BAAEE11420A11684367 /* StatusDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusDot.swift; sourceTree = "<group>"; };
+		4A0844A16FA4CA90BB7F7959 /* CustomContainerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomContainerConfig.swift; sourceTree = "<group>"; };
+		4C40D5E5527FC4F97EE923FE /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
+		4CA731158DFBA27B9CFFDC49 /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
+		5924C5BB34CA3AC1EB55D679 /* LauncherConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherConfig.swift; sourceTree = "<group>"; };
+		6AF36DD19ADA8ED6433A4B32 /* OpenCERNApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCERNApp.swift; sourceTree = "<group>"; };
+		6BB7BCA6B9EF555B07D2E3EC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		80B3FB4D1C6AEE5C79F1C766 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		882C74740B5EA9AD74E03B5C /* DockerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DockerClient.swift; sourceTree = "<group>"; };
+		8A76886611EAE8CDA51CEECD /* CustomContainersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomContainersView.swift; sourceTree = "<group>"; };
+		8B78B8F138DD0A7B7089A65E /* ServiceDefinitions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDefinitions.swift; sourceTree = "<group>"; };
+		9C7FBF56D405D0E8DC2216B1 /* ConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigService.swift; sourceTree = "<group>"; };
+		A1D8E9A137811E9358886C39 /* UpdateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateViewModel.swift; sourceTree = "<group>"; };
+		A2049083CCB6A22E9C87444C /* ContainerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerInfo.swift; sourceTree = "<group>"; };
+		A5ECE2C96FF2C865D3CD39A5 /* SetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupViewModel.swift; sourceTree = "<group>"; };
+		A6106D84C28D2EE2AD9BE326 /* ProgressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressBarView.swift; sourceTree = "<group>"; };
+		A65D04484D9ADC69139283C5 /* UpdateStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateStatus.swift; sourceTree = "<group>"; };
+		AC98511B3B374C973D2DB179 /* OpenCERN.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OpenCERN.entitlements; sourceTree = "<group>"; };
+		BDDA1148554BF9F0159B1AE6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		CD92211DB43F093A0A5CBC72 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CEED35185B823E8B03479325 /* AddContainerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddContainerSheet.swift; sourceTree = "<group>"; };
+		D483A89F8D424FD19FF3093B /* OpenCERN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenCERN.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ED92664A076BE53888CDA169 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		FC56472B89A070E8328A2E85 /* UpdateService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateService.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B8B6F10851E59C8526EF3821 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C6E0BD21B9852A7434312277 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2103A60A182C4CEB0F52F697 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				CEED35185B823E8B03479325 /* AddContainerSheet.swift */,
+				1A5EB8171B799DCA44F996A5 /* ContainerCardView.swift */,
+				08BDC7BC9A01FB819BB07AFD /* LogViewerView.swift */,
+				A6106D84C28D2EE2AD9BE326 /* ProgressBarView.swift */,
+				49137BAAEE11420A11684367 /* StatusDot.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		63FB7FEC2FC8B442F03322D9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D483A89F8D424FD19FF3093B /* OpenCERN.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		72CC5B301AAF0904AD041165 /* OpenCERN */ = {
+			isa = PBXGroup;
+			children = (
+				6BB7BCA6B9EF555B07D2E3EC /* Info.plist */,
+				AC98511B3B374C973D2DB179 /* OpenCERN.entitlements */,
+				DC7DD3252149BF17F3ECFC22 /* App */,
+				2103A60A182C4CEB0F52F697 /* Components */,
+				C2681B22C888F0D79C3C3C7D /* Models */,
+				B89C85A0195D823BD08776A4 /* Services */,
+				CA39E5712DEBEE1E99F6A640 /* Theme */,
+				9785D95AAE16CE1A861603C4 /* ViewModels */,
+				863A08BF694514D937F316A2 /* Views */,
+			);
+			path = OpenCERN;
+			sourceTree = "<group>";
+		};
+		863A08BF694514D937F316A2 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				CD92211DB43F093A0A5CBC72 /* ContentView.swift */,
+				8A76886611EAE8CDA51CEECD /* CustomContainersView.swift */,
+				12E355A1FE1EDEF6B841C1C9 /* DashboardView.swift */,
+				BDDA1148554BF9F0159B1AE6 /* SettingsView.swift */,
+				02527DAEA20BB66BC3476E76 /* SetupView.swift */,
+				ED92664A076BE53888CDA169 /* SplashView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		9785D95AAE16CE1A861603C4 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				0205DB6B40DD5F271A2A52E3 /* DockerViewModel.swift */,
+				4CA731158DFBA27B9CFFDC49 /* SettingsViewModel.swift */,
+				A5ECE2C96FF2C865D3CD39A5 /* SetupViewModel.swift */,
+				A1D8E9A137811E9358886C39 /* UpdateViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		B89C85A0195D823BD08776A4 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				9C7FBF56D405D0E8DC2216B1 /* ConfigService.swift */,
+				882C74740B5EA9AD74E03B5C /* DockerClient.swift */,
+				3904DACB9AF0778483FDFB43 /* DockerService.swift */,
+				FC56472B89A070E8328A2E85 /* UpdateService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		C2681B22C888F0D79C3C3C7D /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A2049083CCB6A22E9C87444C /* ContainerInfo.swift */,
+				4A0844A16FA4CA90BB7F7959 /* CustomContainerConfig.swift */,
+				5924C5BB34CA3AC1EB55D679 /* LauncherConfig.swift */,
+				8B78B8F138DD0A7B7089A65E /* ServiceDefinitions.swift */,
+				A65D04484D9ADC69139283C5 /* UpdateStatus.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		CA39E5712DEBEE1E99F6A640 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				4C40D5E5527FC4F97EE923FE /* Colors.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		DC7DD3252149BF17F3ECFC22 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				80B3FB4D1C6AEE5C79F1C766 /* AppDelegate.swift */,
+				6AF36DD19ADA8ED6433A4B32 /* OpenCERNApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		E9A315990D9407915E30FB44 = {
+			isa = PBXGroup;
+			children = (
+				72CC5B301AAF0904AD041165 /* OpenCERN */,
+				63FB7FEC2FC8B442F03322D9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1D962DA0A3B3F2BCDB396548 /* OpenCERN */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EEDEB8903FA362C14ABE7071 /* Build configuration list for PBXNativeTarget "OpenCERN" */;
+			buildPhases = (
+				83442A1729192765DD603040 /* Sources */,
+				B8B6F10851E59C8526EF3821 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OpenCERN;
+			packageProductDependencies = (
+				6DDAFED56F1A85B8FDA4A43F /* Sparkle */,
+			);
+			productName = OpenCERN;
+			productReference = D483A89F8D424FD19FF3093B /* OpenCERN.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E99ADFA3542445E9C33687DE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 8DB72FACDB8B9FF7E88D617A /* Build configuration list for PBXProject "OpenCERN" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E9A315990D9407915E30FB44;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				93D9CEF4029EAB3B5002E0B0 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 63FB7FEC2FC8B442F03322D9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1D962DA0A3B3F2BCDB396548 /* OpenCERN */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		83442A1729192765DD603040 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8311F5480F66B6EC0FAD03ED /* AddContainerSheet.swift in Sources */,
+				886719C26E0B6586913624B0 /* AppDelegate.swift in Sources */,
+				45556C911DBE9F139222D512 /* Colors.swift in Sources */,
+				477BDA4BC48F4F319AF4BA2A /* ConfigService.swift in Sources */,
+				EA383A526BCB054989566B6B /* ContainerCardView.swift in Sources */,
+				F4B3796FECC3778F6EE190BC /* ContainerInfo.swift in Sources */,
+				C8614C157EDED26D700E735F /* ContentView.swift in Sources */,
+				16E9301B110B18EA6CC3BA2E /* CustomContainerConfig.swift in Sources */,
+				83A19964F6BA47633CCEBEDA /* CustomContainersView.swift in Sources */,
+				8B3804099DA392E1799B6AAB /* DashboardView.swift in Sources */,
+				7B231E20E11585F29652CC66 /* DockerClient.swift in Sources */,
+				6DA390A7E9F14A7EF71DA5DD /* DockerService.swift in Sources */,
+				65237C4FCC911952F075DBF3 /* DockerViewModel.swift in Sources */,
+				98E82C720622489B900BBE2C /* LauncherConfig.swift in Sources */,
+				31C7A9307FB14BAD3E5AC3E9 /* LogViewerView.swift in Sources */,
+				2EF54506ACE258138C9195F3 /* OpenCERNApp.swift in Sources */,
+				6918338FC5BBF8E36D31350A /* ProgressBarView.swift in Sources */,
+				0A71716AE13F20A037C67C14 /* ServiceDefinitions.swift in Sources */,
+				C6D04957BE641AA09387D784 /* SettingsView.swift in Sources */,
+				77E4183A6A7E4A86D4BF1F27 /* SettingsViewModel.swift in Sources */,
+				FB0DF148474BE533C793688A /* SetupView.swift in Sources */,
+				00350E5976422F81238830BA /* SetupViewModel.swift in Sources */,
+				92F29B7A96D8B0146AB5331E /* SplashView.swift in Sources */,
+				3ADD90681E66F6F33EB903E4 /* StatusDot.swift in Sources */,
+				BAEC79F63A4FC9D6BD7D99C2 /* UpdateService.swift in Sources */,
+				4FFA0785E24942CB1058001C /* UpdateStatus.swift in Sources */,
+				FC59627732E47F84BCA7C22D /* UpdateViewModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4DD5F02834150B56C5F60885 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = OpenCERN/OpenCERN.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OpenCERN/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.northstarcorp.opencern.launcher;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A2DA1D1438AEB217C66D7D75 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		CD464AC07EFB0512B5518A70 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		EC351A7C1A1663EE1ABFDC1F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = OpenCERN/OpenCERN.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = OpenCERN/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = co.northstarcorp.opencern.launcher;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8DB72FACDB8B9FF7E88D617A /* Build configuration list for PBXProject "OpenCERN" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A2DA1D1438AEB217C66D7D75 /* Debug */,
+				CD464AC07EFB0512B5518A70 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EEDEB8903FA362C14ABE7071 /* Build configuration list for PBXNativeTarget "OpenCERN" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC351A7C1A1663EE1ABFDC1F /* Debug */,
+				4DD5F02834150B56C5F60885 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		93D9CEF4029EAB3B5002E0B0 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6DDAFED56F1A85B8FDA4A43F /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 93D9CEF4029EAB3B5002E0B0 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = E99ADFA3542445E9C33687DE /* Project object */;
+}
