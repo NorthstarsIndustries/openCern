@@ -29,18 +29,24 @@ jobs:
 
       - name: Build release archive
         run: |
+          SIGN_ARGS=""
+          if [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
+            SIGN_ARGS="CODE_SIGN_IDENTITY=${{ secrets.APPLE_DEVELOPER_ID }} DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} OTHER_CODE_SIGN_FLAGS=--timestamp"
+          else
+            SIGN_ARGS="CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=NO"
+          fi
+
           xcodebuild archive \
             -scheme OpenCERN \
             -configuration Release \
             -archivePath build/OpenCERN.xcarchive \
             -destination "generic/platform=macOS" \
-            CODE_SIGN_IDENTITY="${{ secrets.APPLE_DEVELOPER_ID }}" \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp"
+            $SIGN_ARGS
 
       - name: Export archive
         run: |
-          cat > ExportOptions.plist << 'PLIST'
+          if [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
+            cat > ExportOptions.plist << PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -53,10 +59,14 @@ jobs:
           </plist>
           PLIST
 
-          xcodebuild -exportArchive \
-            -archivePath build/OpenCERN.xcarchive \
-            -exportPath build/export \
-            -exportOptionsPlist ExportOptions.plist
+            xcodebuild -exportArchive \
+              -archivePath build/OpenCERN.xcarchive \
+              -exportPath build/export \
+              -exportOptionsPlist ExportOptions.plist
+          else
+            mkdir -p build/export
+            cp -R build/OpenCERN.xcarchive/Products/Applications/OpenCERN.app build/export/
+          fi
 
       - name: Create DMG
         run: |
@@ -66,6 +76,7 @@ jobs:
           hdiutil create -volname "OpenCERN" -srcfolder build/dmg -ov -format UDZO build/OpenCERN-macOS.dmg
 
       - name: Notarize DMG
+        if: ${{ secrets.APPLE_TEAM_ID != '' }}
         run: |
           xcrun notarytool submit build/OpenCERN-macOS.dmg \
             --apple-id "${{ secrets.APPLE_ID }}" \
@@ -76,6 +87,7 @@ jobs:
           xcrun stapler staple build/OpenCERN-macOS.dmg
 
       - name: Generate Sparkle appcast
+        if: ${{ secrets.SPARKLE_ED_KEY != '' }}
         run: |
           SPARKLE_BIN=$(swift package --package-path . show-dependencies --format json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('path',''))" 2>/dev/null || echo "")
           if [ -n "$SPARKLE_BIN" ] && [ -f "$SPARKLE_BIN/bin/generate_appcast" ]; then
