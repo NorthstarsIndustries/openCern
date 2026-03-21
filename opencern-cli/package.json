@@ -5,8 +5,15 @@
   "author": "NorthStars Industries",
   "license": "MIT",
   "bin": {
-    "opencern": "./bin/opencern.js"
+    "opencern": "bin/opencern.js"
   },
+  "files": [
+    "bin/",
+    "dist/",
+    "assets/",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "dist/app.js",
   "scripts": {
