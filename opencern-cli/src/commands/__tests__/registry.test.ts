@@ -30,7 +30,7 @@ describe('registry', () => {
       const all = registry.getAll();
       const withAlias = all.find((c: any) => c.aliases && c.aliases.length > 0);
       if (withAlias) {
-        const found = registry.find(withAlias.aliases[0]);
+        const found = registry.find(withAlias.aliases![0]);
         expect(found).toBeDefined();
         expect(found!.name).toBe(withAlias.name);
       }

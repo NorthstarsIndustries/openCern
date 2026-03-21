@@ -13,6 +13,7 @@ export function GlobalStateProvider({ children }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [visualizeFile, setVisualizeFile] = useState(null);
   
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
       const saved = localStorage.getItem('opencern-ai-config');
@@ -21,11 +22,12 @@ export function GlobalStateProvider({ children }) {
         setAiConfig(prev => ({ ...prev, ...parsed }));
       }
     } catch {}
-    
+
     axios.get('http://localhost:8080/files')
       .then(r => setDownloaded(r.data))
       .catch(() => {});
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const saveAiConfig = useCallback((newConfig) => {
     setAiConfig(newConfig);

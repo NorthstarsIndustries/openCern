@@ -14,8 +14,9 @@ vi.mock('os', () => ({
 }));
 vi.mock('module', () => ({
   createRequire: vi.fn(() => {
-    const req = vi.fn(() => ({ version: '1.0.0-beta.1' }));
-    req.resolve = vi.fn();
+    const req = Object.assign(vi.fn(() => ({ version: '1.0.0-beta.1' })), {
+      resolve: vi.fn(),
+    });
     return req;
   }),
 }));

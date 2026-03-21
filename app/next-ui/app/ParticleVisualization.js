@@ -70,10 +70,10 @@ export default function ParticleVisualization({ filename }) {
     maxZoom: 10
   });
 
-  const lastInteractionRef = useRef(Date.now());
-  const eventChangeTimeRef = useRef(Date.now());
+  const lastInteractionRef = useRef(0);
+  const eventChangeTimeRef = useRef(0);
   const prevEventRef = useRef(null);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
 
   // Connection and loading
   useEffect(() => {
@@ -164,12 +164,14 @@ export default function ParticleVisualization({ filename }) {
   }, []);
 
   // Handle Event Change
+  /* eslint-disable react-hooks/purity */
   const handleEventChange = (idx) => {
     prevEventRef.current = events[currentEventIndex];
     eventChangeTimeRef.current = Date.now();
     setCurrentEventIndex(idx);
     lastInteractionRef.current = Date.now();
   };
+  /* eslint-enable react-hooks/purity */
 
   const jumpToMaxHt = () => {
     if (events.length === 0) return;
