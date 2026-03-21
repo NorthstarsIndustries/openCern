@@ -8,7 +8,43 @@
     "build": "next build && npm run build:electron",
     "build:electron": "tsc -p tsconfig.electron.json",
     "start": "electron .",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:linux": "npm run build && electron-builder --linux --publish never"
+  },
+  "build": {
+    "appId": "com.opencern.launcher",
+    "productName": "OpenCERN",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron-dist/**/*",
+      "out/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.education",
+      "icon": "public/icon.png"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "public/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Science",
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
