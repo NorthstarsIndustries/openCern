@@ -12,11 +12,10 @@ function createWindow(): void {
     minWidth: 860,
     minHeight: 520,
     frame: false,
-    transparent: true,
     center: true,
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 12, y: 12 },
-    backgroundColor: "#00000000",
+    backgroundColor: "#0a0a0f",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -28,10 +27,12 @@ function createWindow(): void {
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:3001");
-    // Open DevTools in development
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../out/index.html"));
+    // In packaged app, __dirname = <app>/Resources/app.asar/electron-dist
+    // out/ is at <app>/Resources/app.asar/out
+    const indexPath = path.join(__dirname, "..", "out", "index.html");
+    mainWindow.loadFile(indexPath);
   }
 
   mainWindow.on("closed", () => {

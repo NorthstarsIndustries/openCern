@@ -50,7 +50,39 @@ jobs:
       - name: Build Next.js + Electron
         run: npm run build
 
-      - name: Package and publish with electron-builder
-        run: npx electron-builder ${{ matrix.args }} --publish always
+      - name: Package with electron-builder
+        run: npx electron-builder ${{ matrix.args }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: launcher-${{ matrix.platform }}
+          path: |
+            app/launcher/release/*.dmg
+            app/launcher/release/*.zip
+            app/launcher/release/*.AppImage
+            app/launcher/release/*.deb
+            app/launcher/release/*.exe
+            app/launcher/release/latest*.yml
+          if-no-files-found: warn
+
+  attach-to-release:
+    name: Attach to GitHub Release
+    needs: build-launcher
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: launcher-artifacts/
+          pattern: launcher-*
+          merge-multiple: true
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          tag_name: ${{ github.ref_name }}
+          files: launcher-artifacts/*
