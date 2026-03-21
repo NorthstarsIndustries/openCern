@@ -5,7 +5,7 @@
   "description": "OpenCERN Desktop Launcher — manage CERN Open Data containers and analysis tools",
   "author": {
     "name": "NorthStars Industries",
-    "email": "contact@northstarcorp.co"
+    "email": "founder@northstarcorp.co"
   },
   "homepage": "https://github.com/NorthstarsIndustries/openCern",
   "repository": {
@@ -25,7 +25,7 @@
     "dist:linux": "npm run build && electron-builder --linux --publish never"
   },
   "build": {
-    "appId": "com.opencern.launcher",
+    "appId": "co.northstarcorp.opencern.launcher",
     "productName": "OpenCERN",
     "publish": null,
     "directories": {
