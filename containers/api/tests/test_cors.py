@@ -2,9 +2,6 @@
 Tests for CORS middleware headers.
 """
 import pytest
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 
 def test_cors_allows_any_origin(client):

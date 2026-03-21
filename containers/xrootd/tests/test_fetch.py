@@ -3,9 +3,6 @@ Tests for XRootD proxy /fetch and /status endpoints.
 """
 import pytest
 from unittest.mock import patch, MagicMock
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 
 @pytest.fixture(autouse=True)

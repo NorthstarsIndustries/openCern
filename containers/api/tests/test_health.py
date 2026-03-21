@@ -2,9 +2,6 @@
 Tests for the /health endpoint.
 """
 import pytest
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 
 def test_health_returns_200(client):

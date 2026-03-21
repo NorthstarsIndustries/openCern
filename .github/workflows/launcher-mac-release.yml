@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,10 +29,12 @@ jobs:
         run: swift package resolve
 
       - name: Build release archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
         run: |
-          SIGN_ARGS=""
-          if [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
-            SIGN_ARGS="CODE_SIGN_IDENTITY=${{ secrets.APPLE_DEVELOPER_ID }} DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} OTHER_CODE_SIGN_FLAGS=--timestamp"
+          if [ -n "$APPLE_TEAM_ID" ]; then
+            SIGN_ARGS="CODE_SIGN_IDENTITY=$APPLE_DEVELOPER_ID DEVELOPMENT_TEAM=$APPLE_TEAM_ID OTHER_CODE_SIGN_FLAGS=--timestamp"
           else
             SIGN_ARGS="CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=NO"
           fi
@@ -44,20 +47,11 @@ jobs:
             $SIGN_ARGS
 
       - name: Export archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          if [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
-            cat > ExportOptions.plist << PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>developer-id</string>
-              <key>teamID</key>
-              <string>${{ secrets.APPLE_TEAM_ID }}</string>
-          </dict>
-          </plist>
-          PLIST
+          if [ -n "$APPLE_TEAM_ID" ]; then
+            printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n  <key>method</key>\n  <string>developer-id</string>\n  <key>teamID</key>\n  <string>%s</string>\n</dict>\n</plist>\n' "$APPLE_TEAM_ID" > ExportOptions.plist
 
             xcodebuild -exportArchive \
               -archivePath build/OpenCERN.xcarchive \
@@ -76,23 +70,29 @@ jobs:
           hdiutil create -volname "OpenCERN" -srcfolder build/dmg -ov -format UDZO build/OpenCERN-macOS.dmg
 
       - name: Notarize DMG
-        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        if: env.APPLE_TEAM_ID != ''
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
           xcrun notarytool submit build/OpenCERN-macOS.dmg \
-            --apple-id "${{ secrets.APPLE_ID }}" \
-            --password "${{ secrets.APPLE_APP_PASSWORD }}" \
-            --team-id "${{ secrets.APPLE_TEAM_ID }}" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
             --wait
 
           xcrun stapler staple build/OpenCERN-macOS.dmg
 
       - name: Generate Sparkle appcast
-        if: ${{ secrets.SPARKLE_ED_KEY != '' }}
+        if: env.SPARKLE_ED_KEY != ''
+        env:
+          SPARKLE_ED_KEY: ${{ secrets.SPARKLE_ED_KEY }}
         run: |
           SPARKLE_BIN=$(swift package --package-path . show-dependencies --format json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('path',''))" 2>/dev/null || echo "")
           if [ -n "$SPARKLE_BIN" ] && [ -f "$SPARKLE_BIN/bin/generate_appcast" ]; then
             "$SPARKLE_BIN/bin/generate_appcast" \
-              --ed-key-file <(echo "${{ secrets.SPARKLE_ED_KEY }}") \
+              --ed-key-file <(echo "$SPARKLE_ED_KEY") \
               build/
           else
             echo "Sparkle generate_appcast not found, skipping appcast generation"
