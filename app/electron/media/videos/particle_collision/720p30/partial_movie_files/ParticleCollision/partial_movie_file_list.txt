@@ -1,9 +1,0 @@
-# This file is used internally by FFMPEG.
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2644794617_393186642_325162975.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_3930035675_2047505839.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_153892272_3708786205.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_2782191770_3978756151.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_2782191770_2449317346.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_2782191770_4114072150.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_2558953630_293986587.mp4'
-file 'file:/Users/icon/opencern/app/electron/media/videos/particle_collision/720p30/partial_movie_files/ParticleCollision/2509153678_2574473371_1815464668.mp4'

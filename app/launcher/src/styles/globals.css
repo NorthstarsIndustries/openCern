@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+/* ─── Theme ────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --color-bg-base: #050505;
+  --color-bg-elevated: #0a0a0a;
+  --color-bg-surface: #0f0f0f;
+  --color-bg-surface-hover: #161616;
+  --color-bg-surface-active: #1c1c1c;
+  --color-bg-hover: rgba(255, 255, 255, 0.03);
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.14);
+
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #888888;
+  --color-text-tertiary: #666666;
+
+  --color-accent: #e8e8e8;
+  --color-accent-hover: #ffffff;
+  --color-accent-muted: rgba(255, 255, 255, 0.06);
+
+  --color-status-running: #4ade80;
+  --color-status-running-muted: rgba(74, 222, 128, 0.08);
+  --color-status-stopped: #f87171;
+  --color-status-stopped-muted: rgba(248, 113, 113, 0.08);
+  --color-status-pending: #facc15;
+  --color-status-pending-muted: rgba(250, 204, 21, 0.08);
+
+  --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+    "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace,
+    monospace;
+
+  --animate-in: enter 0.15s ease-out;
+  --animate-out: exit 0.1s ease-in;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @keyframes exit {
+    to {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ─── Base ─────────────────────────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ─── Platform-specific ────────────────────────────────────────────────────── */
+
+.mac-hidden {
+  display: none;
+}
+
+body.platform-windows .mac-hidden,
+body.platform-linux .mac-hidden {
+  display: flex;
+}
+
+/* ─── Animations ───────────────────────────────────────────────────────────── */
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* ─── Radix animations ─────────────────────────────────────────────────────── */
+
+@keyframes collapsible-down {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+[data-state="open"] > [data-radix-collapsible-content] {
+  animation: collapsible-down 0.15s ease-out;
+}
+
+[data-state="closed"] > [data-radix-collapsible-content] {
+  animation: collapsible-up 0.1s ease-in;
+  overflow: hidden;
+}
+
+/* ─── shadcn/ui animation utilities ───────────────────────────────────────── */
+
+@keyframes shadcn-in {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+               scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
+}
+
+@keyframes shadcn-out {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+               scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
+  }
+}
+
+.animate-in  { animation: shadcn-in 0.15s ease-out; }
+.animate-out { animation: shadcn-out 0.1s ease-in forwards; }
+.fade-in-0   { --tw-enter-opacity: 0; }
+.fade-out-0  { --tw-exit-opacity: 0; }
+.zoom-in-95  { --tw-enter-scale: 0.95; }
+.zoom-in-96  { --tw-enter-scale: 0.96; }
+.zoom-out-95 { --tw-exit-scale: 0.95; }
+.zoom-out-96 { --tw-exit-scale: 0.96; }
+
+/* ─── Focus ────────────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.25);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

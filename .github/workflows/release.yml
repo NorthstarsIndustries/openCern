@@ -82,15 +82,11 @@ jobs:
           prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
           files: |
             artifacts/**/*
+            scripts/install.sh
+            scripts/install-w.sh
 
   trigger-docker-publish:
     name: Trigger Docker publish
     needs: create-release
     uses: ./.github/workflows/docker-publish.yml
-    secrets: inherit
-
-  trigger-npm-publish:
-    name: Trigger npm publish
-    needs: create-release
-    uses: ./.github/workflows/npm-publish.yml
     secrets: inherit

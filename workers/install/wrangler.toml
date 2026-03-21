@@ -1,0 +1,9 @@
+name = "opencern-install"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+routes = [
+  { pattern = "opencern.northstarcorp.co/install.sh", zone_name = "northstarcorp.co" },
+  { pattern = "opencern.northstarcorp.co/install-w.sh", zone_name = "northstarcorp.co" },
+  { pattern = "opencern.northstarcorp.co/install-l.sh", zone_name = "northstarcorp.co" },
+]

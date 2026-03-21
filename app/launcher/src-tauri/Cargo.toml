@@ -1,0 +1,34 @@
+[package]
+name = "opencern-launcher"
+version = "1.0.0"
+description = "OpenCERN Launcher — lightweight Docker-based service manager"
+authors = ["Naol Demisse"]
+edition = "2021"
+
+[lib]
+name = "opencern_launcher_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+tauri-plugin-opener = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+bollard = "0.18"
+reqwest = { version = "0.12", features = ["json"] }
+semver = "1"
+dirs = "6"
+open = "5"
+chrono = { version = "0.4", features = ["serde"] }
+futures-util = "0.3"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

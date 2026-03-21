@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
+  "identifier": "default",
+  "description": "Default capability for the OpenCERN Launcher",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-size",
+    "core:window:allow-set-focus",
+    "opener:default",
+    "shell:allow-open",
+    "notification:default",
+    "notification:allow-notify",
+    "process:default",
+    "updater:default"
+  ]
+}

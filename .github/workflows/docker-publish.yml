@@ -6,6 +6,7 @@ on:
     paths:
       - "containers/**"
       - "opencern-cli/quantum/**"
+      - "app/next-ui/**"
   workflow_call:
 
 permissions:
@@ -31,6 +32,9 @@ jobs:
           - name: quantum
             context: opencern-cli/quantum
             dockerfile: opencern-cli/quantum/Dockerfile
+          - name: ui
+            context: app/next-ui
+            dockerfile: app/next-ui/Dockerfile
 
     steps:
       - name: Checkout repository
