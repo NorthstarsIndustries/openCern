@@ -104,6 +104,57 @@ export default function App() {
       <div className="h-full flex flex-col bg-bg-base">
         <Titlebar />
 
+        {/* App update banner */}
+        {updater.appUpdateState === "available" && updater.appUpdateInfo && (
+          <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-accent-muted border-b border-border">
+            <span className="text-xs text-text-primary">
+              Update available: <strong>v{updater.appUpdateInfo.version}</strong>
+            </span>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={updater.dismissAppUpdate}>
+                Later
+              </Button>
+              <Button size="sm" onClick={updater.downloadUpdate}>
+                Download
+              </Button>
+            </div>
+          </div>
+        )}
+        {updater.appUpdateState === "downloading" && updater.appUpdateProgress && (
+          <div className="shrink-0 px-4 py-2 bg-accent-muted border-b border-border">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-text-primary">Downloading update...</span>
+              <span className="text-xs text-text-secondary">{updater.appUpdateProgress.percent}%</span>
+            </div>
+            <div className="w-full h-1 bg-bg-inset rounded-full overflow-hidden">
+              <div
+                className="h-full bg-accent-primary rounded-full transition-all duration-300"
+                style={{ width: `${updater.appUpdateProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {updater.appUpdateState === "ready" && (
+          <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-green-950/30 border-b border-green-900/40">
+            <span className="text-xs text-green-400">
+              Update downloaded. Relaunch to apply.
+            </span>
+            <Button size="sm" onClick={updater.installUpdate}>
+              Relaunch
+            </Button>
+          </div>
+        )}
+        {updater.appUpdateState === "error" && (
+          <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-red-950/30 border-b border-red-900/40">
+            <span className="text-xs text-red-400">
+              Update failed: {updater.appUpdateError}
+            </span>
+            <Button size="sm" variant="ghost" onClick={updater.dismissAppUpdate}>
+              Dismiss
+            </Button>
+          </div>
+        )}
+
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar */}
           <aside className="w-[200px] shrink-0 flex flex-col border-r border-border">

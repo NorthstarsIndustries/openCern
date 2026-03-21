@@ -1,4 +1,5 @@
-import { BrowserWindow } from "electron";
+import { BrowserWindow, app } from "electron";
+import { autoUpdater } from "electron-updater";
 import { loadConfig } from "./config";
 import { builtinServices } from "./containers";
 import { connect } from "./docker";
@@ -14,9 +15,61 @@ export interface UpdateStatus {
   launcher_update: LauncherUpdate | null;
 }
 
-const APP_VERSION = "1.0.0";
+// ── Auto-updater (electron-updater) ──────────────────────────────
 
-/** Check if any Docker images have newer versions available. */
+function sendToAllWindows(channel: string, data: unknown): void {
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(channel, data);
+  }
+}
+
+export function initAutoUpdater(): void {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("update-available", (info) => {
+    sendToAllWindows("app-update-available", {
+      version: info.version,
+      releaseNotes: info.releaseNotes,
+    });
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    sendToAllWindows("app-update-progress", {
+      percent: Math.round(progress.percent),
+      bytesPerSecond: progress.bytesPerSecond,
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
+  autoUpdater.on("update-downloaded", () => {
+    sendToAllWindows("app-update-ready", {});
+  });
+
+  autoUpdater.on("error", (err) => {
+    sendToAllWindows("app-update-error", { message: err.message });
+  });
+}
+
+export async function checkAppUpdate(): Promise<void> {
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch {
+    // Network error or no update — silently ignore
+  }
+}
+
+export function downloadAppUpdate(): void {
+  autoUpdater.downloadUpdate();
+}
+
+export function installAppUpdate(): void {
+  autoUpdater.quitAndInstall(false, true);
+}
+
+// ── Docker image updates ──────────────────────────────────────────
+
 async function checkDockerImageUpdates(
   dockerSocket: string,
   dataDir: string,
@@ -49,74 +102,28 @@ async function checkDockerImageUpdates(
   }
 }
 
-/** Check GitHub Releases for a newer launcher version. */
-async function checkLauncherVersion(): Promise<LauncherUpdate | null> {
-  try {
-    const resp = await fetch(
-      "https://api.github.com/repos/NorthstarsIndustries/openCern/releases/latest",
-      {
-        headers: { "User-Agent": "opencern-launcher" },
-      },
-    );
-
-    if (!resp.ok) return null;
-
-    const release = (await resp.json()) as { tag_name?: string; html_url?: string };
-    const tag = release.tag_name;
-    if (!tag) return null;
-
-    const latest = tag.replace(/^v/, "");
-
-    // Simple semver comparison
-    const currentParts = APP_VERSION.split(".").map(Number);
-    const latestParts = latest.split(".").map(Number);
-
-    let isNewer = false;
-    for (let i = 0; i < 3; i++) {
-      if ((latestParts[i] || 0) > (currentParts[i] || 0)) {
-        isNewer = true;
-        break;
-      }
-      if ((latestParts[i] || 0) < (currentParts[i] || 0)) break;
-    }
-
-    if (isNewer) {
-      return {
-        current_version: APP_VERSION,
-        latest_version: latest,
-        download_url: release.html_url || "",
-      };
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 /** Spawn a background task that periodically checks for updates. */
 export function spawnUpdateChecker(): void {
+  initAutoUpdater();
+
   const check = async () => {
     const config = loadConfig();
     const imageUpdates = await checkDockerImageUpdates(
       config.docker_socket,
       config.data_dir,
     );
-    const launcherUpdate = await checkLauncherVersion();
 
-    if (imageUpdates.length > 0 || launcherUpdate) {
+    // Check for app update via electron-updater
+    await checkAppUpdate();
+
+    if (imageUpdates.length > 0) {
       const status: UpdateStatus = {
         image_updates: imageUpdates,
-        launcher_update: launcherUpdate,
+        launcher_update: null,
       };
-
-      const windows = BrowserWindow.getAllWindows();
-      for (const win of windows) {
-        win.webContents.send("update-available", status);
-      }
+      sendToAllWindows("update-available", status);
     }
 
-    // Schedule next check
     const interval = loadConfig().update_interval_secs;
     setTimeout(check, interval * 1000);
   };
@@ -131,10 +138,10 @@ export async function checkForUpdates(
   dataDir: string,
 ): Promise<UpdateStatus> {
   const imageUpdates = await checkDockerImageUpdates(dockerSocket, dataDir);
-  const launcherUpdate = await checkLauncherVersion();
+  await checkAppUpdate();
 
   return {
     image_updates: imageUpdates,
-    launcher_update: launcherUpdate,
+    launcher_update: null,
   };
 }

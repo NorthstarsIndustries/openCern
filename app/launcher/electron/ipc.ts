@@ -93,4 +93,6 @@ export function registerIpcHandlers(): void {
   ipcMain.handle("check_for_updates", (_, args) =>
     updater.checkForUpdates(args.dockerSocket, args.dataDir),
   );
+  ipcMain.handle("download_app_update", () => updater.downloadAppUpdate());
+  ipcMain.handle("install_app_update", () => updater.installAppUpdate());
 }

@@ -27,7 +27,11 @@
   "build": {
     "appId": "co.northstarcorp.opencern.launcher",
     "productName": "OpenCERN",
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "NorthstarsIndustries",
+      "repo": "openCern"
+    },
     "directories": {
       "output": "release"
     },
@@ -38,17 +42,35 @@
     ],
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.education",
       "icon": "public/icon.png"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "public/icon.png"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Science",
       "icon": "public/icon.png"
     },
@@ -68,6 +90,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dockerode": "^4.0.4",
+    "electron-updater": "^6.8.3",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",
     "next": "^15.3.0",
