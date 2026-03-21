@@ -16,7 +16,34 @@ permissions:
   packages: write
 
 jobs:
+  test-containers:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            working-directory: containers/api
+            command: python -m pytest tests/ -v
+          - name: xrootd
+            working-directory: containers/xrootd
+            command: python -m pytest tests/ -v
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: ${{ matrix.working-directory }}
+        run: |
+          pip install -r requirements.txt 2>/dev/null || true
+          pip install pytest pytest-asyncio httpx
+      - name: Run tests
+        working-directory: ${{ matrix.working-directory }}
+        run: ${{ matrix.command }}
+
   build-and-push:
+    needs: test-containers
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

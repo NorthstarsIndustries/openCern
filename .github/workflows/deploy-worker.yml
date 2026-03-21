@@ -9,7 +9,53 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-auth-system:
+    runs-on: ubuntu-latest
+    name: Test Auth System
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: workers/auth-system/package-lock.json
+      - run: npm ci
+        working-directory: workers/auth-system
+      - run: npm test --if-present
+        working-directory: workers/auth-system
+
+  test-cli-auth:
+    runs-on: ubuntu-latest
+    name: Test CLI Auth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: workers/cli-auth/package-lock.json
+      - run: npm ci
+        working-directory: workers/cli-auth
+      - run: npm test --if-present
+        working-directory: workers/cli-auth
+
+  test-install:
+    runs-on: ubuntu-latest
+    name: Test Install Worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: workers/install/package-lock.json
+      - run: npm ci
+        working-directory: workers/install
+      - run: npm test --if-present
+        working-directory: workers/install
+
   deploy-auth-system:
+    needs: test-auth-system
     runs-on: ubuntu-latest
     name: Deploy Auth System
     steps:
@@ -28,6 +74,7 @@ jobs:
           CLERK_WEBHOOK_SECRET: ${{ secrets.CLERK_WEBHOOK_SECRET }}
 
   deploy-cli-auth:
+    needs: test-cli-auth
     runs-on: ubuntu-latest
     name: Deploy CLI Auth
     steps:
@@ -44,6 +91,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
   deploy-install:
+    needs: test-install
     runs-on: ubuntu-latest
     name: Deploy Install Redirect
     steps:

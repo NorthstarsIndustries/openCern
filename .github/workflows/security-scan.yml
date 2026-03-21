@@ -1,0 +1,105 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    name: CodeQL Analysis
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    name: NPM Audit
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - opencern-cli
+          - app/next-ui
+          - app/launcher
+          - workers/auth-system
+          - workers/cli-auth
+          - workers/install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: ${{ matrix.package }}
+        run: npm ci
+      - name: Run npm audit
+        working-directory: ${{ matrix.package }}
+        run: npm audit --audit-level=high
+
+  trivy-containers:
+    runs-on: ubuntu-latest
+    name: Trivy Container Scan
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: .
+            dockerfile: containers/api/Dockerfile
+          - name: xrootd
+            context: containers/xrootd
+            dockerfile: containers/xrootd/Dockerfile
+          - name: streamer
+            context: containers/streaming
+            dockerfile: containers/streaming/Dockerfile
+          - name: quantum
+            context: opencern-cli/quantum
+            dockerfile: opencern-cli/quantum/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: opencern-${{ matrix.name }}:scan
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: opencern-${{ matrix.name }}:scan
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          severity: CRITICAL,HIGH
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}
