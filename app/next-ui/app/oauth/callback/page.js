@@ -3,10 +3,10 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function OAuthCallback() {
+function OAuthCallbackInner() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState('Processing...');
 
@@ -48,5 +48,21 @@ export default function OAuthCallback() {
         <div>{status}</div>
       </div>
     </div>
+  );
+}
+
+export default function OAuthCallback() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: '#0f0f11', color: '#ccc',
+        fontFamily: 'system-ui, sans-serif', fontSize: '15px',
+      }}>
+        <div>Processing...</div>
+      </div>
+    }>
+      <OAuthCallbackInner />
+    </Suspense>
   );
 }

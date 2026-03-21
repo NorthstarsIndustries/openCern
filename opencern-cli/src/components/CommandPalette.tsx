@@ -3,14 +3,18 @@
 
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
-import Fuse from 'fuse.js';
 import { registry, type CommandDef } from '../commands/registry.js';
 
 const allCommands = registry.getAll();
-const fuse = new Fuse(allCommands, {
-  keys: ['name', 'description', 'category'],
-  threshold: 0.4,
-});
+
+function fuzzyMatch(commands: CommandDef[], query: string): CommandDef[] {
+  const q = query.toLowerCase();
+  return commands.filter(cmd =>
+    cmd.name.toLowerCase().includes(q) ||
+    cmd.description.toLowerCase().includes(q) ||
+    cmd.category.toLowerCase().includes(q)
+  );
+}
 
 interface CommandPaletteProps {
   query: string;
@@ -22,7 +26,7 @@ export function CommandPalette({ query, onSelect, onDismiss }: CommandPalettePro
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const filtered = query.length > 1
-    ? fuse.search(query.slice(1)).map(r => r.item)
+    ? fuzzyMatch(allCommands, query.slice(1))
     : allCommands;
 
   const maxVisible = 12;

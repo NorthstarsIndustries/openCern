@@ -1,0 +1,15 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  cli:
+    uses: ./.github/workflows/cli-ci.yml
+
+  ui:
+    uses: ./.github/workflows/ui-ci.yml
+
+  launcher:
+    uses: ./.github/workflows/launcher-ci.yml

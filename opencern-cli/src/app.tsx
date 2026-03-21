@@ -314,9 +314,9 @@ function App(): React.JSX.Element {
     // Check Docker in background
     if (config.get('autoStartDocker')) {
       (async () => {
-        const running = docker.isDockerRunning();
+        const running = await docker.isDockerRunning();
         if (running) {
-          const present = docker.areImagesPresent();
+          const present = await docker.areImagesPresent();
           if (!present) {
             addOutput('  missing required engine images. pulling from GHCR...', 'cyan');
             try {
@@ -1063,7 +1063,7 @@ function App(): React.JSX.Element {
       }
 
       case '/version': {
-        addOutput(versionInfo());
+        addOutput(await versionInfo());
         return;
       }
 

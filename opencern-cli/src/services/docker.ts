@@ -6,12 +6,15 @@
  * See LICENSE.enterprise for full terms.
  */
 
-import { execSync, spawn } from 'child_process';
+import { execSync, spawn, execFile } from 'child_process';
 import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { promisify } from 'util';
 import axios from 'axios';
 import { config } from '../utils/config.js';
+
+const execFileAsync = promisify(execFile);
 
 const COMPOSE_FILE = join(homedir(), '.opencern', 'docker-compose.yml');
 
@@ -69,16 +72,16 @@ function composeCmd(args: string[]): string {
 }
 
 export const docker = {
-  isDockerRunning(): boolean {
+  async isDockerRunning(): Promise<boolean> {
     try {
-      execSync('docker info 2>/dev/null', { stdio: 'ignore' });
+      await execFileAsync('docker', ['info']);
       return true;
     } catch {
       return false;
     }
   },
 
-  areImagesPresent(includeQuantum = true): boolean {
+  async areImagesPresent(includeQuantum = true): Promise<boolean> {
     const images = [
       'ghcr.io/ceoatnorthstar/api:latest',
       'ghcr.io/ceoatnorthstar/xrootd:latest',
@@ -87,7 +90,7 @@ export const docker = {
     ];
     for (const image of images) {
       try {
-        execSync(`docker image inspect ${image} 2>/dev/null`, { stdio: 'ignore' });
+        await execFileAsync('docker', ['image', 'inspect', image]);
       } catch {
         return false;
       }
@@ -141,7 +144,11 @@ export const docker = {
       ...(includeQuantum ? ['ghcr.io/ceoatnorthstar/quantum:latest'] : []),
     ];
     for (const image of images) {
-      execSync(`docker pull ${image}`, { stdio: 'inherit' });
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn('docker', ['pull', image], { stdio: 'pipe' });
+        proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`docker pull ${image} failed with code ${code}`)));
+        proc.on('error', reject);
+      });
     }
   },
 

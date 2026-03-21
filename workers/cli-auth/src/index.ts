@@ -188,6 +188,16 @@ export default {
       });
     }
 
+    // GET / — Health check / status
+    if (method === 'GET' && (url.pathname === '/' || url.pathname === '')) {
+      return json({
+        service: 'opencern-cli-auth',
+        status: 'ok',
+        version: '1.0.0',
+        endpoints: ['/auth/cli/init', '/auth/cli/poll', '/auth/cli/authorize', '/auth/cli/revoke'],
+      });
+    }
+
     return json({ error: 'Not found' }, 404);
   },
 };

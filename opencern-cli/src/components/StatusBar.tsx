@@ -29,7 +29,7 @@ function StatusBarComponent(): React.JSX.Element {
   const failCountRef = useRef(0);
 
   const checkStatus = async () => {
-    const dockerRunning = docker.isDockerRunning();
+    const dockerRunning = await docker.isDockerRunning();
     const apiReady = dockerRunning ? await docker.isApiReady() : false;
     const quantumReady = dockerRunning ? await docker.isQuantumReady() : false;
     const authStatus = isAuthenticated();

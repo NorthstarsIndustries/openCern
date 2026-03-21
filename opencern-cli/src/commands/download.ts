@@ -29,9 +29,14 @@ export async function startDownload(
 
 export async function pollDownload(
   id: string,
-  onProgress: (status: DownloadStatus) => void
+  onProgress: (status: DownloadStatus) => void,
+  maxPollMs = 10 * 60 * 1000
 ): Promise<DownloadStatus> {
+  const start = Date.now();
   while (true) {
+    if (Date.now() - start > maxPollMs) {
+      throw new Error('Download poll timed out after 10 minutes');
+    }
     const status = await cernApi.downloadStatus(id);
     onProgress(status);
     if (status.status === 'done' || status.status === 'error' || status.status === 'cancelled') {

@@ -1,0 +1,5 @@
+dist/
+sim/build/
+*.o
+*.o.d
+node_modules/

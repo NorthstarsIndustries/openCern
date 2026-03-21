@@ -60,7 +60,7 @@ export function envInfo(): string[] {
 
 // ── Version ──────────────────────────────────────────────
 
-export function versionInfo(): string[] {
+export async function versionInfo(): Promise<string[]> {
   let cliVersion = 'unknown';
   try {
     const require = createRequire(import.meta.url);
@@ -79,7 +79,7 @@ export function versionInfo(): string[] {
   const dockerVer = safeExec('docker --version');
   if (dockerVer) lines.push(`  Docker       ${dockerVer.replace('Docker version ', '').split(',')[0]}`);
 
-  if (docker.isDockerRunning()) {
+  if (await docker.isDockerRunning()) {
     const status = docker.getStatus();
     const running = Object.values(status).filter(s => s.running).length;
     const total = Object.keys(status).length;
