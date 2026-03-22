@@ -44,6 +44,7 @@ jobs:
         run: bun run build
 
       - name: Compile standalone binary
+        shell: bash
         run: |
           rm -f bunfig.toml
           bun build ./bin/opencern.js --compile --outfile ${{ matrix.artifact }}
