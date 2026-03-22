@@ -75,24 +75,19 @@ describe('login', () => {
   });
 
   it('should handle poll returning expired status', async () => {
+    vi.useRealTimers();
+
     vi.mocked(axios.post).mockResolvedValueOnce({
       data: { code: 'EXPIRED', expiresAt: new Date(Date.now() + 300_000).toISOString() },
     } as any);
 
     vi.mocked(axios.get).mockResolvedValue({ data: { status: 'expired' } } as any);
 
-    const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 2 });
-
-    for (let i = 0; i < 30; i++) {
-      await vi.advanceTimersByTimeAsync(100);
-      await vi.advanceTimersByTimeAsync(0);
-    }
-
-    const result = await loginPromise;
+    const result = await login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 2 });
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('expired');
-  }, 10000);
+  });
 });
 
 describe('logout', () => {
