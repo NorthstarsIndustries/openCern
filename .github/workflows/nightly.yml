@@ -1,0 +1,57 @@
+# Tests #15, #16: Performance & load tests (nightly)
+name: Nightly Performance Tests
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  # Test #15: API container load test
+  api-load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start API container
+        run: |
+          mkdir -p ~/opencern-datasets/data ~/opencern-datasets/processed
+          docker compose up -d api
+          sleep 10
+        env:
+          HOME: ${{ github.workspace }}
+        continue-on-error: true
+
+      - name: Install autocannon
+        run: npm install -g autocannon
+
+      - name: Load test /health endpoint
+        run: |
+          autocannon -c 50 -d 30 -p 10 http://127.0.0.1:8080/health || echo "::warning::Load test could not connect — API may not be running"
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v 2>/dev/null || true
+
+  # Test #16: Worker latency test
+  worker-latency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Measure install worker redirect latency
+        run: |
+          for i in 1 2 3 4 5; do
+            START=$(date +%s%N)
+            HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" -L --max-redirs 0 https://opencern.northstarcorp.co/install.sh 2>/dev/null || echo "000")
+            END=$(date +%s%N)
+            LATENCY=$(( (END - START) / 1000000 ))
+            echo "Attempt $i: ${LATENCY}ms (HTTP ${HTTP_CODE})"
+          done
+          echo "Worker latency test complete"

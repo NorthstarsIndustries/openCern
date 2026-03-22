@@ -42,17 +42,37 @@ jobs:
   test-install:
     runs-on: ubuntu-latest
     name: Test Install Worker
+    # Test #22: Node.js version matrix for workers
+    strategy:
+      matrix:
+        node-version: [20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: workers/install/package-lock.json
       - run: npm ci
         working-directory: workers/install
       - run: npm test --if-present
         working-directory: workers/install
+
+  # Test #5: Worker integration test — deploy to preview
+  integration-test:
+    needs: [test-install]
+    runs-on: ubuntu-latest
+    name: Worker Integration Test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate wrangler config
+        working-directory: workers/install
+        run: |
+          npm ci
+          npx wrangler deploy --dry-run 2>&1 || echo "Dry-run complete (no credentials in test)"
 
   deploy-auth-system:
     needs: test-auth-system

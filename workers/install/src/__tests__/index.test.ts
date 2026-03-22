@@ -32,6 +32,15 @@ describe('install worker', () => {
     });
   });
 
+  // Test #6: Install worker /uninstall.sh route test
+  describe('GET /uninstall.sh', () => {
+    it('redirects to GitHub raw uninstall.sh', async () => {
+      const res = await worker.fetch(req('/uninstall.sh'));
+      expect(res.status).toBe(302);
+      expect(res.headers.get('Location')).toBe(`${RAW_BASE}/uninstall.sh`);
+    });
+  });
+
   describe('GET / (default text response)', () => {
     it('returns plain text install instructions', async () => {
       const res = await worker.fetch(req('/'));
@@ -45,11 +54,12 @@ describe('install worker', () => {
       expect(text).toContain('install-w.sh');
     });
 
-    it('includes macOS/Linux and Windows instructions', async () => {
+    it('includes install and uninstall instructions', async () => {
       const res = await worker.fetch(req('/'));
       const text = await res.text();
-      expect(text).toContain('macOS / Linux');
-      expect(text).toContain('Windows (Git Bash)');
+      expect(text).toContain('Install:');
+      expect(text).toContain('Uninstall:');
+      expect(text).toContain('uninstall.sh');
     });
   });
 

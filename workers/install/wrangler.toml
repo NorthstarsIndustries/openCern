@@ -6,4 +6,6 @@ routes = [
   { pattern = "opencern.northstarcorp.co/install.sh", zone_name = "northstarcorp.co" },
   { pattern = "opencern.northstarcorp.co/install-w.sh", zone_name = "northstarcorp.co" },
   { pattern = "opencern.northstarcorp.co/install-l.sh", zone_name = "northstarcorp.co" },
+  { pattern = "opencern.northstarcorp.co/uninstall.sh", zone_name = "northstarcorp.co" },
+  { pattern = "opencern.northstarcorp.co/*", zone_name = "northstarcorp.co" },
 ]
