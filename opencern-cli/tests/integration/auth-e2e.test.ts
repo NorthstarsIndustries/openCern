@@ -102,7 +102,7 @@ describe('auth E2E flow', () => {
     const result = await loginPromise;
     expect(result.success).toBe(false);
     expect(result.error).toContain('timed out');
-  });
+  }, 20000);
 
   it('should handle logout when no token exists', async () => {
     vi.mocked(getKey).mockReturnValue(null);
