@@ -5,12 +5,15 @@
  * Unauthorized copying, modification, or distribution is strictly prohibited.
  * See LICENSE.enterprise for full terms.
  */
-import { execSync } from 'child_process';
+import { execSync, spawn, execFile } from 'child_process';
 import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import axios from 'axios';
+import { promisify } from 'util';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 import { config } from '../utils/config.js';
+const execFileAsync = promisify(execFile);
 const COMPOSE_FILE = join(homedir(), '.opencern', 'docker-compose.yml');
 const DOCKER_COMPOSE_TEMPLATE = `services:
   api:
@@ -63,16 +66,16 @@ function composeCmd(args) {
     return dockerCmd(['compose', '-f', COMPOSE_FILE, ...args]);
 }
 export const docker = {
-    isDockerRunning() {
+    async isDockerRunning() {
         try {
-            execSync('docker info 2>/dev/null', { stdio: 'ignore' });
+            await execFileAsync('docker', ['info']);
             return true;
         }
         catch {
             return false;
         }
     },
-    areImagesPresent(includeQuantum = true) {
+    async areImagesPresent(includeQuantum = true) {
         const images = [
             'ghcr.io/ceoatnorthstar/api:latest',
             'ghcr.io/ceoatnorthstar/xrootd:latest',
@@ -81,7 +84,7 @@ export const docker = {
         ];
         for (const image of images) {
             try {
-                execSync(`docker image inspect ${image} 2>/dev/null`, { stdio: 'ignore' });
+                await execFileAsync('docker', ['image', 'inspect', image]);
             }
             catch {
                 return false;
@@ -102,9 +105,9 @@ export const docker = {
     async getRemoteDigest(imageName) {
         try {
             const repoPath = imageName.replace('ghcr.io/', '').split(':')[0];
-            const tokenRes = await axios.get(`https://ghcr.io/token?scope=repository:${repoPath}:pull`, { timeout: 3000 });
+            const tokenRes = await (await getAxios()).get(`https://ghcr.io/token?scope=repository:${repoPath}:pull`, { timeout: 3000 });
             const token = tokenRes.data.token;
-            const manifestRes = await axios.get(`https://ghcr.io/v2/${repoPath}/manifests/latest`, {
+            const manifestRes = await (await getAxios()).get(`https://ghcr.io/v2/${repoPath}/manifests/latest`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Accept': 'application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json'
@@ -135,17 +138,21 @@ export const docker = {
             ...(includeQuantum ? ['ghcr.io/ceoatnorthstar/quantum:latest'] : []),
         ];
         for (const image of images) {
-            execSync(`docker pull ${image}`, { stdio: 'inherit' });
+            await new Promise((resolve, reject) => {
+                const proc = spawn('docker', ['pull', image], { stdio: 'pipe' });
+                proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`docker pull ${image} failed with code ${code}`)));
+                proc.on('error', reject);
+            });
         }
     },
     async startContainers(includeQuantum = true) {
         ensureComposeFile(includeQuantum);
-        execSync(`docker compose -f ${COMPOSE_FILE} up -d`, { stdio: 'inherit' });
+        execSync(`docker compose -f "${COMPOSE_FILE}" up -d`, { stdio: ['ignore', 'pipe', 'pipe'] });
     },
     async stopContainers() {
         if (!existsSync(COMPOSE_FILE))
             return;
-        execSync(`docker compose -f ${COMPOSE_FILE} stop`, { stdio: 'inherit' });
+        execSync(`docker compose -f "${COMPOSE_FILE}" stop`, { stdio: ['ignore', 'pipe', 'pipe'] });
     },
     getStatus() {
         const containers = ['opencern-api', 'opencern-xrootd', 'opencern-streamer', 'opencern-quantum'];
@@ -165,7 +172,7 @@ export const docker = {
     async isApiReady() {
         try {
             const baseURL = config.get('apiBaseUrl');
-            const res = await axios.get(`${baseURL}/health`, { timeout: 3000 });
+            const res = await (await getAxios()).get(`${baseURL}/health`, { timeout: 3000 });
             return res.status === 200;
         }
         catch {
@@ -174,7 +181,7 @@ export const docker = {
     },
     async isQuantumReady() {
         try {
-            const res = await axios.get('http://localhost:8082/health', { timeout: 3000 });
+            const res = await (await getAxios()).get('http://localhost:8082/health', { timeout: 3000 });
             return res.status === 200;
         }
         catch {

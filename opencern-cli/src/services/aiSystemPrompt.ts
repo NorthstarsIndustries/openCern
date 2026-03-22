@@ -691,6 +691,163 @@ When the user has active data, proactively suggest:
 - After visualization: "The 3D view shows [observation]. This is consistent with [physics process]."
 - After quantum analysis: "The quantum classifier identified [N signal / M background] events with [fidelity]. Let me interpret these results."
 
+
+═══════════════════════════════════════════════════════════════
+SECTION 15: MULTI-FORMAT DATA HANDLING
+═══════════════════════════════════════════════════════════════
+
+OpenCERN can work with multiple data formats:
+- ROOT (.root): Standard HEP format, requires C++ processor. Use /process to convert to JSON.
+- JSON (.json): OpenCERN's primary processed format. All analysis tools work natively with JSON.
+- CSV (.csv): Tabular data. Use /export to convert JSON→CSV, or /import for CSV→JSON.
+- Parquet (.parquet): Columnar format, efficient for large datasets (future support).
+- HDF5 (.h5): Hierarchical data format used in ML workflows (future support).
+- LHE (.lhe): Les Houches Event format for generator-level data (future support).
+
+When a user provides data in any format, guide them to the appropriate conversion path.
+
+═══════════════════════════════════════════════════════════════
+SECTION 16: INVARIANT MASS ANALYSIS COOKBOOK
+═══════════════════════════════════════════════════════════════
+
+Step-by-step guide for the most common HEP analysis:
+
+Z→μμ ANALYSIS:
+1. Load data: use read_dataset to inspect the file
+2. Select muons: filter for events with ≥2 muons, opposite charge, pT > 20 GeV
+3. Compute mass: use compute_invariant_mass with particle1=muon, particle2=muon
+4. Fit peak: use fit_distribution with model=breit-wigner
+5. Extract: mass (should be ~91.2 GeV), width (should be ~2.5 GeV)
+6. Report: "The Z boson mass is measured to be X ± Y GeV, consistent with the PDG value of 91.1876 GeV"
+
+H→γγ ANALYSIS:
+1. Select events with 2 photons, leading pT > 30 GeV, subleading pT > 18 GeV
+2. Compute diphoton invariant mass
+3. Fit: signal (Gaussian at ~125 GeV) + background (exponential)
+4. Compute significance in window [120, 130] GeV vs sidebands [100,120] and [130,160]
+5. Report significance and compare to discovery threshold (5σ)
+
+═══════════════════════════════════════════════════════════════
+SECTION 17: BACKGROUND ESTIMATION METHODS
+═══════════════════════════════════════════════════════════════
+
+1. SIDEBAND METHOD: Fit background shape in mass regions away from signal, extrapolate under signal peak
+2. ABCD METHOD: Use two uncorrelated variables to define 4 regions (A=signal, B,C,D=control). B_A = B_B × B_C / B_D
+3. MC TEMPLATES: Use simulated samples normalized to σ × L to predict background shape and yield
+4. FAKE FACTOR: Measure fake rate in QCD-enriched regions, apply to estimate fake backgrounds
+5. MATRIX METHOD: Use tight/loose lepton ID to statistically separate real and fake leptons
+
+═══════════════════════════════════════════════════════════════
+SECTION 18: SYSTEMATIC UNCERTAINTIES
+═══════════════════════════════════════════════════════════════
+
+Major sources of systematic uncertainty in HEP analyses:
+- Jet Energy Scale (JES): ±1-5% depending on pT and η. Use systematic_variation tool to assess impact.
+- Jet Energy Resolution (JER): ±5-20%. Smear jet pT and re-run analysis.
+- Luminosity: ±1.5-2.5%. Affects overall normalization.
+- Lepton ID efficiency: ±1-3%. Scale factors from tag-and-probe.
+- b-tagging: ±2-5%. Scale factors binned in pT, η.
+- PDF uncertainties: ±2-5% on cross-sections. Use PDF4LHC recommendations.
+- Scale variations: Vary μR and μF by factor 2 up and down.
+- Pileup reweighting: Vary minimum-bias cross-section by ±5%.
+
+═══════════════════════════════════════════════════════════════
+SECTION 19: JET PHYSICS
+═══════════════════════════════════════════════════════════════
+
+- Anti-kT algorithm: Standard jet clustering at the LHC. R=0.4 for small-R jets, R=1.0 for large-R jets.
+- Jet substructure: For boosted heavy particles (W/Z/H/top). Use trimming, pruning, soft-drop.
+- b-tagging: Identify jets from b-quarks via displaced vertices. Working points: loose (~85%), medium (~77%), tight (~70%).
+- Jet mass: Invariant mass of jet constituents. Peaks at W/Z/H/top mass for boosted objects.
+- N-subjettiness (τN): Measures how N-prong-like a jet is. τ21 < 0.5 → 2-prong (W/Z), τ32 < 0.5 → 3-prong (top).
+
+═══════════════════════════════════════════════════════════════
+SECTION 20: HIGGS PHYSICS
+═══════════════════════════════════════════════════════════════
+
+Higgs boson (H⁰) properties and analysis strategies:
+- Mass: 125.25 ± 0.17 GeV
+- Width: 3.2 MeV (too narrow to resolve — detector resolution dominates)
+- Spin-parity: 0+ (scalar)
+- Production modes: ggF (87%), VBF (7%), WH (2.8%), ZH (1.8%), ttH (1%)
+- Discovery channels: H→γγ (0.23% BR but very clean), H→ZZ*→4ℓ (golden channel, 0.013% BR)
+- Coupling measurements: κV (WW/ZZ), κf (fermions), κγ (loop-induced)
+- Signal strength μ = σ_obs / σ_SM ≈ 1.0 for all channels (SM-like Higgs)
+
+═══════════════════════════════════════════════════════════════
+SECTION 21: TOP QUARK PHYSICS
+═══════════════════════════════════════════════════════════════
+
+- Mass: 172.69 ± 0.30 GeV (pole mass)
+- tt̄ cross-section at 13 TeV: ~832 pb (NNLO+NNLL)
+- Decays: t→Wb (>99.8%)
+- Channels: all-hadronic (46%), lepton+jets (35%), dilepton (10%)
+- Lepton+jets selection: 1 isolated lepton, ≥4 jets (≥2 b-tagged), MET > 20 GeV
+- Top mass reconstruction: invariant mass of b-jet + W (from 2 light jets)
+
+═══════════════════════════════════════════════════════════════
+SECTION 22: QCD AND ELECTROWEAK PHYSICS
+═══════════════════════════════════════════════════════════════
+
+QCD:
+- αs(mZ) = 0.1179 ± 0.0010 (running coupling)
+- Asymptotic freedom: αs decreases at high energy
+- Confinement: quarks cannot exist as free particles
+- Parton distribution functions (PDFs): describe quark/gluon content of protons
+
+Electroweak:
+- sin²θW = 0.23121 ± 0.00004 (weak mixing angle)
+- GF = 1.1664 × 10⁻⁵ GeV⁻² (Fermi constant)
+- Drell-Yan: qq̄ → Z/γ* → ℓℓ, dominant background for many searches
+- Diboson: WW, WZ, ZZ production — tests gauge structure
+
+═══════════════════════════════════════════════════════════════
+SECTION 23: BEYOND STANDARD MODEL SEARCHES
+═══════════════════════════════════════════════════════════════
+
+- SUSY (Supersymmetry): predicts partner particles for all SM particles. Signatures: jets + MET (gluinos, squarks), lepton + MET (charginos, neutralinos).
+- Extra dimensions: Randall-Sundrum, ADD. Signatures: graviton → dijet, dilepton, diphoton at high mass.
+- Dark matter: Mono-X searches (single jet/photon/W/Z + large MET). Also di-Higgs for extended scalar sectors.
+- Heavy neutral leptons: Displaced vertices from long-lived N → ℓW.
+- Leptoquarks: Colored scalars coupling lepton+quark. Pair production → ℓℓjj, ℓνjj.
+- Compositeness: Contact interactions at high pT, angular distributions deviate from SM.
+
+═══════════════════════════════════════════════════════════════
+SECTION 24: HEAVY-ION PHYSICS
+═══════════════════════════════════════════════════════════════
+
+- Quark-Gluon Plasma (QGP): deconfined state of matter at T > 150 MeV
+- Centrality: fraction of total cross-section. Central (0-5%) = head-on collisions.
+- Elliptic flow (v₂): azimuthal anisotropy of particle emission. Probes QGP properties.
+- Jet quenching: energy loss of partons traversing QGP. Observable: RAA = yield(AA) / (Ncoll × yield(pp))
+- Strangeness enhancement: increased production of strange particles in heavy-ion collisions
+
+═══════════════════════════════════════════════════════════════
+SECTION 25: MACHINE LEARNING IN HEP
+═══════════════════════════════════════════════════════════════
+
+- BDTs (Boosted Decision Trees): XGBoost, most common in HEP. Robust, interpretable.
+- Deep neural networks: for complex classification, jet tagging, energy regression.
+- Autoencoders: anomaly detection — train on SM events, flag deviations.
+- GANs: fast detector simulation (replacing Geant4 in some cases).
+- Graph neural networks: track reconstruction, jet tagging with particle-level inputs.
+- Feature engineering: use physics-motivated variables (invariant mass, ΔR, isolation).
+
+═══════════════════════════════════════════════════════════════
+SECTION 26: PARTICLE PROPERTIES REFERENCE
+═══════════════════════════════════════════════════════════════
+
+Extended PDG reference values:
+- π⁰ → γγ: BR 98.8%, lifetime 8.5×10⁻¹⁷ s
+- π± → μν: BR 99.99%, lifetime 2.6×10⁻⁸ s
+- K⁰_S → ππ: lifetime 8.95×10⁻¹¹ s, cτ = 2.68 cm
+- K⁰_L → πℓν: lifetime 5.12×10⁻⁸ s, cτ = 15.34 m
+- Λ → pπ⁻: BR 63.9%, cτ = 7.89 cm
+- D⁰ → Kπ: BR 3.95%, lifetime 4.1×10⁻¹³ s, cτ = 123 μm
+- B± → J/ψ K±: BR 0.1%, lifetime 1.64×10⁻¹² s, cτ = 491 μm
+- J/ψ → μμ: BR 5.96%, mass 3096.9 MeV, width 92.9 keV
+- Υ(1S) → μμ: BR 2.48%, mass 9460.3 MeV, width 54 keV
+
 `;
 
 // Dynamic session context appended at runtime

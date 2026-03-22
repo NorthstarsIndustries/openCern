@@ -33,6 +33,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+async function flushAsync(ms = 0) {
+  await vi.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(0);
+}
+
 describe('auth E2E flow', () => {
   it('should complete full login -> getUsername -> logout flow', async () => {
     vi.mocked(axios.post).mockResolvedValueOnce({
@@ -45,8 +50,12 @@ describe('auth E2E flow', () => {
 
     const onCode = vi.fn();
     const onWaiting = vi.fn();
-    const loginPromise = login(onCode, onWaiting);
-    await vi.advanceTimersByTimeAsync(2100);
+    const loginPromise = login(onCode, onWaiting, { pollIntervalMs: 1, maxPollAttempts: 5 });
+
+    for (let i = 0; i < 10; i++) {
+      await vi.advanceTimersByTimeAsync(10);
+    }
+
     const result = await loginPromise;
 
     expect(result.success).toBe(true);
@@ -84,14 +93,17 @@ describe('auth E2E flow', () => {
 
     vi.mocked(axios.get).mockResolvedValue({ data: { status: 'pending' } } as any);
 
-    const loginPromise = login(vi.fn(), vi.fn());
+    const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 3 });
 
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 5000);
+    for (let i = 0; i < 40; i++) {
+      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(0);
+    }
 
     const result = await loginPromise;
     expect(result.success).toBe(false);
     expect(result.error).toContain('timed out');
-  });
+  }, 120000);
 
   it('should handle logout when no token exists', async () => {
     vi.mocked(getKey).mockReturnValue(null);

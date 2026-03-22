@@ -8,6 +8,20 @@ use tokio::sync::mpsc;
 use warp::Filter;
 use serde::{Deserialize, Serialize};
 
+fn strip_data_extension(filename: &str) -> &str {
+    let extensions = [
+        ".root", ".json", ".csv", ".tsv", ".lhe.gz", ".lhe",
+        ".hepmc", ".hepmc2", ".hepmc3", ".parquet",
+        ".hdf5", ".h5", ".yoda", ".ntuple", ".txt", ".dat",
+    ];
+    for ext in &extensions {
+        if let Some(stem) = filename.strip_suffix(ext) {
+            return stem;
+        }
+    }
+    filename
+}
+
 #[derive(Deserialize)]
 struct PaginationQuery {
     filename: String,
@@ -52,8 +66,7 @@ async fn main() {
                             if cmd["action"] == "load" {
                                 if let Some(filename) = cmd["file"].as_str() {
                                     let home = std::env::var("HOME").unwrap();
-                                    let stem = filename.strip_suffix(".root").unwrap_or(filename);
-                                    let stem = stem.strip_suffix(".json").unwrap_or(stem);
+                                    let stem = strip_data_extension(filename);
                                     let filepath = format!("{}/opencern-datasets/processed/{}.json", home, stem);
                                     
                                     println!("Client requested stream for {}", filepath);
@@ -101,7 +114,7 @@ async fn main() {
         .and(warp::query::<PaginationQuery>())
         .map(|q: PaginationQuery| {
             let home = std::env::var("HOME").unwrap();
-            let stem = q.filename.strip_suffix(".root").unwrap_or(&q.filename);
+            let stem = strip_data_extension(&q.filename);
             let filepath = format!("{}/opencern-datasets/processed/{}.json", home, stem);
             
             let page = q.page.unwrap_or(1);

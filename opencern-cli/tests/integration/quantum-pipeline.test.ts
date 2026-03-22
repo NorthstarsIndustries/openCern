@@ -43,6 +43,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+async function flushAsync(ms = 0) {
+  await vi.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(0);
+}
+
 describe('quantum pipeline integration', () => {
   it('should extract events from file, classify, and get results', async () => {
     vi.useRealTimers();
@@ -80,7 +85,12 @@ describe('quantum pipeline integration', () => {
     vi.mocked(docker.startContainers).mockResolvedValue(undefined);
 
     const promise = ensureQuantumRunning();
-    await vi.advanceTimersByTimeAsync(1100);
+
+    for (let i = 0; i < 5; i++) {
+      await flushAsync(0);
+      await flushAsync(1500);
+    }
+
     const result = await promise;
 
     expect(result).toBe(true);

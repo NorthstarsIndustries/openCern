@@ -6,7 +6,8 @@
  * See LICENSE.enterprise for full terms.
  */
 
-import axios from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 
 const QUANTUM_BASE = 'http://localhost:8082';
 
@@ -53,14 +54,14 @@ export interface BackendInfo {
   queueDepth?: number;
 }
 
-function client() {
-  return axios.create({ baseURL: QUANTUM_BASE, timeout: 10000 });
+async function client() {
+  return (await getAxios()).create({ baseURL: QUANTUM_BASE, timeout: 10000 });
 }
 
 export const quantumService = {
   async getStatus(): Promise<{ healthy: boolean; backend: string }> {
     try {
-      const res = await client().get('/health');
+      const res = await (await client()).get('/health');
       return res.data;
     } catch {
       return { healthy: false, backend: 'unknown' };
@@ -68,27 +69,27 @@ export const quantumService = {
   },
 
   async classify(request: ClassifyRequest): Promise<{ jobId: string }> {
-    const res = await client().post('/classify', request);
+    const res = await (await client()).post('/classify', request);
     return res.data;
   },
 
   async getResults(jobId: string): Promise<QuantumJob> {
-    const res = await client().get(`/results/${jobId}`);
+    const res = await (await client()).get(`/results/${jobId}`);
     return res.data;
   },
 
   async setBackend(backend: string, apiKey?: string): Promise<void> {
-    await client().post('/backend', { backend, apiKey });
+    await (await client()).post('/backend', { backend, apiKey });
   },
 
   async listBackends(): Promise<BackendInfo[]> {
-    const res = await client().get('/backends');
+    const res = await (await client()).get('/backends');
     return res.data;
   },
 
   async getCircuitDiagram(numQubits: number, layers: number): Promise<string> {
     try {
-      const res = await client().get('/circuit', { params: { qubits: numQubits, layers } });
+      const res = await (await client()).get('/circuit', { params: { qubits: numQubits, layers } });
       return res.data.diagram;
     } catch {
       // Return a simple ASCII circuit diagram as fallback

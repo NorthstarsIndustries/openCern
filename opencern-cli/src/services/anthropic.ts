@@ -11,6 +11,8 @@ import { getKey } from '../utils/keystore.js';
 import { config } from '../utils/config.js';
 import { execute, estimateResources, type ExecutionResult } from './executor.js';
 import { buildSystemPrompt as buildCernPrompt } from './aiSystemPrompt.js';
+import { AI_TOOLS, AI_TOOL_NAMES, executeAITool } from './ai-tools.js';
+import { getWorkflowGuidance } from './ai-workflows.js';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -69,21 +71,15 @@ export interface UsageStats {
 
 // ─── Tool Definitions ────────────────────────────────────────────────
 
-const TOOLS: Anthropic.Tool[] = [
+const BASE_TOOLS: Anthropic.Tool[] = [
   {
     name: 'execute_python',
     description: 'Execute Python code for data analysis, visualization, or computation. Has access to numpy, pandas, matplotlib, scipy. Generated plots are captured automatically.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        code: {
-          type: 'string',
-          description: 'Python code to execute',
-        },
-        timeout: {
-          type: 'number',
-          description: 'Execution timeout in milliseconds (default: 60000)',
-        },
+        code: { type: 'string', description: 'Python code to execute' },
+        timeout: { type: 'number', description: 'Execution timeout in milliseconds (default: 60000)' },
       },
       required: ['code'],
     },
@@ -94,14 +90,8 @@ const TOOLS: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        command: {
-          type: 'string',
-          description: 'Bash command to execute',
-        },
-        timeout: {
-          type: 'number',
-          description: 'Execution timeout in milliseconds (default: 30000)',
-        },
+        command: { type: 'string', description: 'Bash command to execute' },
+        timeout: { type: 'number', description: 'Execution timeout in milliseconds (default: 30000)' },
       },
       required: ['command'],
     },
@@ -112,15 +102,15 @@ const TOOLS: Anthropic.Tool[] = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        args: {
-          type: 'string',
-          description: 'CLI arguments (e.g., "download cms 2016", "process --file data.root")',
-        },
+        args: { type: 'string', description: 'CLI arguments (e.g., "download cms 2016", "process --file data.root")' },
       },
       required: ['args'],
     },
   },
 ];
+
+// Combine base tools with 50 AI physics/data tools
+const TOOLS: Anthropic.Tool[] = [...BASE_TOOLS, ...AI_TOOLS];
 
 // ─── State ───────────────────────────────────────────────────────────
 
@@ -157,8 +147,42 @@ function buildSystemPrompt(): string {
   if (_context.downloadedDatasets?.length) sessionCtx.downloadedDatasets = _context.downloadedDatasets;
   if (_context.processedFiles?.length) sessionCtx.processedFiles = _context.processedFiles;
   if (_context.lastResults) sessionCtx.lastResults = _context.lastResults;
-  return buildCernPrompt(sessionCtx);
+  return buildCernPrompt(sessionCtx) + getWorkflowGuidance() + TOOL_USAGE_GUIDANCE;
 }
+
+const TOOL_USAGE_GUIDANCE = `
+
+═══════════════════════════════════════════════════════════════
+TOOL USAGE GUIDANCE
+═══════════════════════════════════════════════════════════════
+
+You have 53 tools available. Use NATIVE physics tools instead of execute_bash/execute_python whenever possible:
+
+WHEN TO USE EACH TOOL:
+- For reading data: use read_dataset (not cat or python open())
+- For invariant mass: use compute_invariant_mass (not manual python calculation)
+- For histograms: use create_histogram (not matplotlib unless user specifically wants PNG)
+- For fitting: use fit_distribution (not scipy directly)
+- For searching CERN data: use search_cern_data (not web requests)
+- For cuts/selection: use apply_cuts with a cutflow table
+- For statistics: use compute_significance, compute_cross_section
+- For visualization: use create_histogram, create_scatter (ASCII in terminal)
+- For system checks: use check_system_health, docker_status
+
+TOOL CHAINING PATTERNS:
+1. "Analyze this dataset" → read_dataset → identify_particles → create_histogram
+2. "Find the Z boson" → read_dataset → filter_events → compute_invariant_mass → fit_distribution(breit-wigner)
+3. "Is there a Higgs signal?" → compute_invariant_mass → compute_significance → fit_distribution
+4. "Download and analyze" → search_cern_data → download_dataset → read_dataset → analysis tools
+5. "Compare data vs MC" → read_dataset (both) → compare_distributions → create_ratio_plot
+
+ALWAYS:
+- Show results visually with histograms/plots when possible
+- Report physics interpretation alongside numbers
+- Use proper units (GeV, fb⁻¹, σ)
+- Suggest next analysis steps
+`;
+
 
 // ─── Tool Execution ──────────────────────────────────────────────────
 
@@ -190,12 +214,23 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       });
       break;
 
-    default:
+    default: {
+      // Check if it's one of the 50 AI physics/data tools
+      if (AI_TOOL_NAMES.has(toolCall.name)) {
+        const aiResult = await executeAITool(toolCall.name, toolCall.input);
+        _usage.toolCalls++;
+        return {
+          toolUseId: toolCall.id,
+          success: aiResult.success,
+          output: aiResult.output.slice(0, 8000),
+        };
+      }
       return {
         toolUseId: toolCall.id,
         success: false,
         output: `Unknown tool: ${toolCall.name}`,
       };
+    }
   }
 
   _usage.toolCalls++;
@@ -223,6 +258,13 @@ function formatToolCallDisplay(toolCall: ToolCall): string {
     case 'opencern_cli':
       return `opencern ${toolCall.input.args as string}`;
     default:
+      // For AI tools, show tool name + key params
+      if (AI_TOOL_NAMES.has(toolCall.name)) {
+        const params = Object.entries(toolCall.input)
+          .map(([k, v]) => `${k}=${typeof v === 'string' ? v.slice(0, 50) : v}`)
+          .join(', ');
+        return `${toolCall.name}(${params})`;
+      }
       return JSON.stringify(toolCall.input);
   }
 }

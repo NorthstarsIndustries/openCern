@@ -25,6 +25,14 @@ bool EventLoader::load(const std::string& path) {
         return false;
     }
 
+    // Extract metadata
+    if (root.contains("metadata") && root["metadata"].is_object()) {
+        const auto& meta = root["metadata"];
+        sourceFormat_ = meta.value("format", std::string("json"));
+        sourceExperiment_ = meta.value("experiment", std::string(""));
+        synthetic_ = meta.value("synthetic", false);
+    }
+
     json eventArray;
     if (root.contains("events") && root["events"].is_array()) {
         eventArray = root["events"];

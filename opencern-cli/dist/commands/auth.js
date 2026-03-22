@@ -7,7 +7,8 @@
  */
 import { execSync } from 'child_process';
 import { platform } from 'os';
-import axios from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 import { setKey, deleteKey, getKey } from '../utils/keystore.js';
 const CLI_AUTH_BASE = 'https://opencern-cli-auth.a-contactnaol.workers.dev';
 function openBrowser(url) {
@@ -25,7 +26,7 @@ function openBrowser(url) {
 export async function login(onCode, onWaiting) {
     let initResult;
     try {
-        const res = await axios.post(`${CLI_AUTH_BASE}/auth/cli/init`, {}, { timeout: 10000 });
+        const res = await (await getAxios()).post(`${CLI_AUTH_BASE}/auth/cli/init`, {}, { timeout: 10000 });
         initResult = res.data;
     }
     catch {
@@ -43,7 +44,7 @@ export async function login(onCode, onWaiting) {
     while (Date.now() < deadline) {
         await new Promise(r => setTimeout(r, 2000));
         try {
-            const res = await axios.get(`${CLI_AUTH_BASE}/auth/cli/poll`, {
+            const res = await (await getAxios()).get(`${CLI_AUTH_BASE}/auth/cli/poll`, {
                 params: { code },
                 timeout: 5000,
             });
@@ -66,7 +67,7 @@ export async function logout() {
     const token = getKey('opencern-token');
     if (token) {
         try {
-            await axios.post(`${CLI_AUTH_BASE}/auth/cli/revoke`, {}, {
+            await (await getAxios()).post(`${CLI_AUTH_BASE}/auth/cli/revoke`, {}, {
                 headers: { Authorization: `Bearer ${token}` },
                 timeout: 5000,
             });

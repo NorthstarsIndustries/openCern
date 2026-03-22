@@ -11,7 +11,8 @@ import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { promisify } from 'util';
-import axios from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 import { config } from '../utils/config.js';
 
 const execFileAsync = promisify(execFile);
@@ -111,10 +112,10 @@ export const docker = {
   async getRemoteDigest(imageName: string): Promise<string | null> {
     try {
       const repoPath = imageName.replace('ghcr.io/', '').split(':')[0];
-      const tokenRes = await axios.get(`https://ghcr.io/token?scope=repository:${repoPath}:pull`, { timeout: 3000 });
+      const tokenRes = await (await getAxios()).get(`https://ghcr.io/token?scope=repository:${repoPath}:pull`, { timeout: 3000 });
       const token = tokenRes.data.token;
       
-      const manifestRes = await axios.get(`https://ghcr.io/v2/${repoPath}/manifests/latest`, {
+      const manifestRes = await (await getAxios()).get(`https://ghcr.io/v2/${repoPath}/manifests/latest`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json'
@@ -154,12 +155,12 @@ export const docker = {
 
   async startContainers(includeQuantum = true): Promise<void> {
     ensureComposeFile(includeQuantum);
-    execSync(`docker compose -f ${COMPOSE_FILE} up -d`, { stdio: 'inherit' });
+    execSync(`docker compose -f "${COMPOSE_FILE}" up -d`, { stdio: ['ignore', 'pipe', 'pipe'] });
   },
 
   async stopContainers(): Promise<void> {
     if (!existsSync(COMPOSE_FILE)) return;
-    execSync(`docker compose -f ${COMPOSE_FILE} stop`, { stdio: 'inherit' });
+    execSync(`docker compose -f "${COMPOSE_FILE}" stop`, { stdio: ['ignore', 'pipe', 'pipe'] });
   },
 
   getStatus(): Record<string, { running: boolean; status: string }> {
@@ -180,7 +181,7 @@ export const docker = {
   async isApiReady(): Promise<boolean> {
     try {
       const baseURL = config.get('apiBaseUrl');
-      const res = await axios.get(`${baseURL}/health`, { timeout: 3000 });
+      const res = await (await getAxios()).get(`${baseURL}/health`, { timeout: 3000 });
       return res.status === 200;
     } catch {
       return false;
@@ -189,7 +190,7 @@ export const docker = {
 
   async isQuantumReady(): Promise<boolean> {
     try {
-      const res = await axios.get('http://localhost:8082/health', { timeout: 3000 });
+      const res = await (await getAxios()).get('http://localhost:8082/health', { timeout: 3000 });
       return res.status === 200;
     } catch {
       return false;

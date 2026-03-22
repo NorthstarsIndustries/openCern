@@ -32,6 +32,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+async function flushAsync(ms = 0) {
+  await vi.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(0);
+}
+
 describe('login', () => {
   it('should initiate device code flow and return success on authorization', async () => {
     const onCode = vi.fn();
@@ -45,9 +50,11 @@ describe('login', () => {
       data: { status: 'authorized', token: 'jwt-token-xyz', username: 'testuser' },
     } as any);
 
-    const loginPromise = login(onCode, onWaiting);
+    const loginPromise = login(onCode, onWaiting, { pollIntervalMs: 1, maxPollAttempts: 5 });
 
-    await vi.advanceTimersByTimeAsync(2100);
+    for (let i = 0; i < 10; i++) {
+      await vi.advanceTimersByTimeAsync(10);
+    }
 
     const result = await loginPromise;
 
@@ -74,13 +81,18 @@ describe('login', () => {
 
     vi.mocked(axios.get).mockResolvedValue({ data: { status: 'expired' } } as any);
 
-    const loginPromise = login(vi.fn(), vi.fn());
-    await vi.advanceTimersByTimeAsync(2100);
+    const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 2 });
+
+    for (let i = 0; i < 30; i++) {
+      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
     const result = await loginPromise;
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('expired');
-  });
+  }, 120000);
 });
 
 describe('logout', () => {

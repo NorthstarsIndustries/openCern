@@ -4,7 +4,8 @@ import { execSync } from 'child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import axios from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 import { docker } from '../services/docker.js';
 import { createRequire } from 'module';
 const CACHE_DIR = join(homedir(), '.opencern');
@@ -81,7 +82,7 @@ export async function checkForUpdates(useCache = true) {
     }
     catch { /* ignore */ }
     try {
-        const res = await axios.get('https://registry.npmjs.org/@opencern/cli/latest', { timeout: 5000 });
+        const res = await (await getAxios()).get('https://registry.npmjs.org/@opencern/cli/latest', { timeout: 5000 });
         latestVersion = res.data.version || currentVersion;
     }
     catch { /* offline */ }

@@ -16,6 +16,12 @@ from config import DATA_DIR, PROCESSED_DIR
 log = logging.getLogger("opencern.processing")
 router = APIRouter()
 
+SUPPORTED_DATA_GLOBS = [
+    "*.root", "*.csv", "*.tsv", "*.lhe", "*.lhe.gz",
+    "*.hepmc", "*.hepmc2", "*.hepmc3", "*.parquet",
+    "*.hdf5", "*.h5", "*.yoda", "*.dat", "*.txt",
+]
+
 process_status: dict[str, str] = {}
 
 
@@ -25,15 +31,15 @@ class ProcessRequest(BaseModel):
 
 
 def run_processor(filepath: str, track_key: str, experiment: str = "auto"):
-    """Run the C++ data processor binary directly (embedded in API container)."""
+    """Run the appropriate processor based on file format."""
     full_path = os.path.join(DATA_DIR, filepath)
-    log.info(f"Running C++ processor for {track_key} (experiment={experiment})")
+    ext = os.path.splitext(full_path)[1].lower()
+    log.info(f"Running processor for {track_key} (experiment={experiment}, format={ext})")
 
-    cmd = [
-        "opencern-processor",
-        full_path,
-        "--experiment", experiment,
-    ]
+    if ext == '.root':
+        cmd = ["opencern-processor", full_path, "--experiment", experiment]
+    else:
+        cmd = ["python", "/app/data-processor/main.py", full_path, "--experiment", experiment]
 
     try:
         result = subprocess.run(
@@ -71,32 +77,35 @@ def run_folder_processor(folder_name: str, experiment: str = "auto"):
     a single {folder_name}.json with combined events sorted by HT.
     """
     folder_path = os.path.join(DATA_DIR, folder_name)
-    root_files = sorted(glob.glob(os.path.join(folder_path, "*.root")))
+    data_files = []
+    for pattern in SUPPORTED_DATA_GLOBS:
+        data_files.extend(glob.glob(os.path.join(folder_path, pattern)))
+    data_files = sorted(set(data_files))
 
-    if not root_files:
+    if not data_files:
         process_status[folder_name] = "error"
-        log.error(f"No ROOT files found in {folder_path}")
+        log.error(f"No data files found in {folder_path}")
         return
 
-    total_files = len(root_files)
-    log.info(f"Folder processing: {folder_name} — {total_files} ROOT file(s)")
+    total_files = len(data_files)
+    log.info(f"Folder processing: {folder_name} — {total_files} data file(s)")
     process_status[folder_name] = f"processing 0/{total_files}"
 
     all_events = []
     all_metadata = []
     errors = []
 
-    for idx, root_file in enumerate(root_files):
+    for idx, root_file in enumerate(data_files):
         basename = os.path.basename(root_file)
         process_status[folder_name] = f"processing {idx + 1}/{total_files}: {basename}"
         log.info(f"  [{idx + 1}/{total_files}] Processing {basename}...")
 
-        # Run C++ processor on this file
-        cmd = [
-            "opencern-processor",
-            root_file,
-            "--experiment", experiment,
-        ]
+        # Run appropriate processor based on format
+        ext = os.path.splitext(basename)[1].lower()
+        if ext == '.root':
+            cmd = ["opencern-processor", root_file, "--experiment", experiment]
+        else:
+            cmd = ["python", "/app/data-processor/main.py", root_file, "--experiment", experiment]
 
         try:
             result = subprocess.run(
@@ -244,17 +253,20 @@ async def process_folder(folder: str, background_tasks: BackgroundTasks,
     if not os.path.isdir(folder_path):
         return {"error": f"Folder not found: {folder}"}
 
-    root_files = glob.glob(os.path.join(folder_path, "*.root"))
-    if not root_files:
-        return {"error": f"No ROOT files in {folder}"}
+    data_files = []
+    for pattern in SUPPORTED_DATA_GLOBS:
+        data_files.extend(glob.glob(os.path.join(folder_path, pattern)))
+    data_files = sorted(set(data_files))
+    if not data_files:
+        return {"error": f"No data files in {folder}"}
 
-    process_status[folder] = f"processing 0/{len(root_files)}"
+    process_status[folder] = f"processing 0/{len(data_files)}"
     background_tasks.add_task(run_folder_processor, folder, experiment)
 
     return {
-        "message": f"Processing {len(root_files)} ROOT files in {folder}/",
+        "message": f"Processing {len(data_files)} data files in {folder}/",
         "status": "processing",
-        "total_files": len(root_files),
+        "total_files": len(data_files),
         "experiment": experiment,
     }
 
