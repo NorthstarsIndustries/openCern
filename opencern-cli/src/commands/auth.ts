@@ -39,9 +39,10 @@ export async function login(
   onWaiting: () => void,
   opts?: LoginOpts,
 ): Promise<LoginResult> {
+  const axios = await getAxios();
   let initResult: { code: string; expiresAt: string };
   try {
-    const res = await (await getAxios()).post(`${CLI_AUTH_BASE}/auth/cli/init`, {}, { timeout: 10000 });
+    const res = await axios.post(`${CLI_AUTH_BASE}/auth/cli/init`, {}, { timeout: 10000 });
     initResult = res.data as { code: string; expiresAt: string };
   } catch {
     return {
@@ -66,7 +67,7 @@ export async function login(
     await new Promise(r => setTimeout(r, pollInterval));
     attempts++;
     try {
-      const res = await (await getAxios()).get(`${CLI_AUTH_BASE}/auth/cli/poll`, {
+      const res = await axios.get(`${CLI_AUTH_BASE}/auth/cli/poll`, {
         params: { code },
         timeout: 5000,
       });
@@ -90,10 +91,11 @@ export async function login(
 }
 
 export async function logout(): Promise<void> {
+  const axios = await getAxios();
   const token = getKey('opencern-token');
   if (token) {
     try {
-      await (await getAxios()).post(`${CLI_AUTH_BASE}/auth/cli/revoke`, {}, {
+      await axios.post(`${CLI_AUTH_BASE}/auth/cli/revoke`, {}, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 5000,
       });
