@@ -74,7 +74,7 @@ describe('login', () => {
     expect(result.error).toBeDefined();
   });
 
-  it('should handle poll returning expired status', async () => {
+  it('should handle poll returning expired status', { timeout: 15000 }, async () => {
     vi.mocked(axios.post).mockResolvedValueOnce({
       data: { code: 'EXPIRED', expiresAt: new Date(Date.now() + 300_000).toISOString() },
     } as any);

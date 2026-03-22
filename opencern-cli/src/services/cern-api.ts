@@ -60,15 +60,16 @@ export interface LocalFile {
 
 function normalizeError(err: unknown): Error {
   if (err && typeof err === "object" && "isAxiosError" in (err as any)) {
-    const code = err.response?.status;
+    const axErr = err as any;
+    const code = axErr.response?.status;
     const retryable = !code || code >= 500 || code === 429;
     let msg: string;
 
-    if (err.code === 'ECONNREFUSED') {
+    if (axErr.code === 'ECONNREFUSED') {
       msg = 'API not running. Start containers with /status or check Docker.';
-    } else if (err.code === 'ETIMEDOUT' || err.code === 'ECONNABORTED') {
+    } else if (axErr.code === 'ETIMEDOUT' || axErr.code === 'ECONNABORTED') {
       msg = 'API timed out. The server may be overloaded or unresponsive.';
-    } else if (err.code === 'ENOTFOUND') {
+    } else if (axErr.code === 'ENOTFOUND') {
       msg = 'API host not found. Check your apiBaseUrl in /config.';
     } else if (code === 401) {
       msg = 'Unauthorized. Run /login to authenticate.';
@@ -77,7 +78,7 @@ function normalizeError(err: unknown): Error {
     } else if (code === 404) {
       msg = 'Endpoint not found. The API version may be incompatible — try /update.';
     } else if (code === 422) {
-      const detail = err.response?.data?.detail;
+      const detail = axErr.response?.data?.detail;
       if (Array.isArray(detail)) {
         msg = `Validation error: ${detail.map((d: any) => d.msg || JSON.stringify(d)).join('; ')}`;
       } else {
@@ -88,7 +89,7 @@ function normalizeError(err: unknown): Error {
     } else if (code && code >= 500) {
       msg = `Server error (${code}). The API encountered an internal problem.`;
     } else {
-      msg = err.response?.data?.detail || err.response?.data?.message || err.message;
+      msg = axErr.response?.data?.detail || axErr.response?.data?.message || axErr.message;
     }
 
     const error = new Error(msg) as Error & { code?: number; retryable?: boolean };
