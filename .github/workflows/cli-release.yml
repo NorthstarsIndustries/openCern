@@ -44,7 +44,9 @@ jobs:
         run: bun run build
 
       - name: Compile standalone binary
-        run: bun build ./bin/opencern.js --compile --outfile ${{ matrix.artifact }}
+        run: |
+          rm -f bunfig.toml
+          bun build ./bin/opencern.js --compile --outfile ${{ matrix.artifact }}
 
       # Test #2: Compile smoke test — verify binary starts
       - name: Smoke test — binary runs

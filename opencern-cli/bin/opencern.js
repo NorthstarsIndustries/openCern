@@ -2,11 +2,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 OpenCERN Contributors
 
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import pkg from '../package.json' with { type: 'json' };
 
 // Parse initial flags
 const args = process.argv.slice(2);
@@ -15,8 +11,6 @@ const showHelp = args.includes('--help') || args.includes('-h');
 const debugMode = args.includes('--debug');
 
 if (showVersion) {
-  const require = createRequire(import.meta.url);
-  const pkg = require('../package.json');
   console.log(`opencern v${pkg.version}`);
   process.exit(0);
 }
