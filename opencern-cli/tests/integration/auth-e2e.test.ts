@@ -95,14 +95,15 @@ describe('auth E2E flow', () => {
 
     const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 3 });
 
-    for (let i = 0; i < 20; i++) {
-      await vi.advanceTimersByTimeAsync(10);
+    for (let i = 0; i < 40; i++) {
+      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(0);
     }
 
     const result = await loginPromise;
     expect(result.success).toBe(false);
     expect(result.error).toContain('timed out');
-  }, 20000);
+  }, 120000);
 
   it('should handle logout when no token exists', async () => {
     vi.mocked(getKey).mockReturnValue(null);

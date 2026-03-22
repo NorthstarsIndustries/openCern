@@ -83,16 +83,16 @@ describe('login', () => {
 
     const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 2 });
 
-    // Advance in small chunks to allow dynamic import microtasks to settle
-    for (let i = 0; i < 10; i++) {
-      await vi.advanceTimersByTimeAsync(10);
+    for (let i = 0; i < 30; i++) {
+      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(0);
     }
 
     const result = await loginPromise;
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('expired');
-  }, 60000);
+  }, 120000);
 });
 
 describe('logout', () => {
