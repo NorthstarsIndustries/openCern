@@ -6,7 +6,6 @@ import os
 import sys
 import json
 import tempfile
-import pytest
 
 # Add parent dir to path for import
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))

@@ -2,9 +2,6 @@
 Tests for /classify endpoint in the quantum VQC service.
 """
 import pytest
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 SAMPLE_EVENTS = [
     {"pt": 120.5, "eta": -0.8, "phi": 1.2, "energy": 250.0},

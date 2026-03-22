@@ -2,9 +2,6 @@
 Tests for /circuit diagram generation.
 """
 import pytest
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 
 def test_circuit_default_params(client):

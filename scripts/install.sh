@@ -38,10 +38,8 @@ echo "  Finding latest CLI release..."
 RELEASES_JSON="${TMP_DIR}/releases.json"
 
 if command -v curl >/dev/null 2>&1; then
-  DOWNLOAD_CMD="curl -fsSL"
   curl -fsSL "https://api.github.com/repos/${REPO}/releases" -o "$RELEASES_JSON"
 elif command -v wget >/dev/null 2>&1; then
-  DOWNLOAD_CMD="wget -q -O -"
   wget -q "https://api.github.com/repos/${REPO}/releases" -O "$RELEASES_JSON"
 else
   echo "Error: curl or wget is required to install OpenCERN CLI."
