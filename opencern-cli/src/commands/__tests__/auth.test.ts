@@ -92,7 +92,7 @@ describe('login', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('expired');
-  }, 120000);
+  }, 10000);
 });
 
 describe('logout', () => {
