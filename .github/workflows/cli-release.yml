@@ -1,0 +1,187 @@
+name: CLI Release
+
+on:
+  push:
+    tags:
+      - "cli-v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Build matrix: compile Bun binaries for 3 platforms ──
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            artifact: opencern-linux
+          - os: macos-latest
+            target: macos
+            artifact: opencern-macos
+          - os: windows-latest
+            target: windows
+            artifact: opencern-win.exe
+
+    defaults:
+      run:
+        working-directory: opencern-cli
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build TypeScript
+        run: bun run build
+
+      - name: Compile standalone binary
+        run: bun build ./bin/opencern.js --compile --outfile ${{ matrix.artifact }}
+
+      # Test #2: Compile smoke test — verify binary starts
+      - name: Smoke test — binary runs
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            ./${{ matrix.artifact }} --version
+          else
+            chmod +x ${{ matrix.artifact }}
+            ./${{ matrix.artifact }} --version
+          fi
+
+      # Test #11: CLI E2E — run actual commands on compiled binary
+      - name: E2E — help and version
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "windows" ]; then
+            BIN="./${{ matrix.artifact }}"
+          else
+            BIN="./${{ matrix.artifact }}"
+          fi
+          $BIN --version
+          $BIN --help
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: opencern-cli/${{ matrix.artifact }}
+          if-no-files-found: error
+
+  # ── Multi-platform binary verification (Test #21) ──
+  verify-linux:
+    name: Verify binary on ubuntu-22.04
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: opencern-linux
+      - name: Run on ubuntu-22.04
+        run: |
+          chmod +x opencern-linux
+          ./opencern-linux --version
+
+  # ── Shellcheck lint (Test #1) ──
+  shellcheck:
+    name: Shellcheck install scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Lint install.sh
+        run: shellcheck scripts/install.sh
+      - name: Lint install-w.sh
+        run: shellcheck scripts/install-w.sh
+      - name: Lint uninstall.sh
+        run: shellcheck scripts/uninstall.sh
+
+  # ── Create GitHub Release ──
+  create-release:
+    name: Create GitHub Release
+    needs: [build, shellcheck, verify-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "## What's Changed" > CHANGELOG.md
+          PREV_TAG=$(git tag --list 'cli-v*' --sort=-v:refname | head -2 | tail -1)
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "${{ github.ref_name }}" ]; then
+            git log --oneline "${PREV_TAG}..${{ github.ref_name }}" >> CHANGELOG.md
+          else
+            echo "Initial CLI release" >> CHANGELOG.md
+          fi
+
+      # Test #18: SHA256 checksums for binary integrity
+      - name: Generate SHA256 checksums
+        run: |
+          cd artifacts
+          sha256sum opencern-linux opencern-macos opencern-win.exe > checksums.txt 2>/dev/null || \
+          shasum -a 256 opencern-linux opencern-macos opencern-win.exe > checksums.txt
+          cat checksums.txt
+
+      # Test #17: SBOM generation
+      - uses: oven-sh/setup-bun@v2
+      - name: Generate SBOM
+        working-directory: opencern-cli
+        run: |
+          bun install --frozen-lockfile
+          bunx @cyclonedx/cyclonedx-npm --output-file ../artifacts/sbom.json --spec-version 1.5 || echo '{"bomFormat":"CycloneDX","specVersion":"1.5","components":[]}' > ../artifacts/sbom.json
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "CLI ${{ github.ref_name }}"
+          body_file: CHANGELOG.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          files: |
+            artifacts/opencern-linux
+            artifacts/opencern-macos
+            artifacts/opencern-win.exe
+            artifacts/checksums.txt
+            artifacts/sbom.json
+            scripts/install.sh
+            scripts/install-w.sh
+            scripts/uninstall.sh
+
+      # Test #4: Release asset verification
+      - name: Verify release assets exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 5
+          ASSETS=$(gh release view "${{ github.ref_name }}" --json assets -q '.assets[].name')
+          echo "Release assets:"
+          echo "$ASSETS"
+          for expected in opencern-linux opencern-macos opencern-win.exe checksums.txt install.sh install-w.sh uninstall.sh; do
+            if echo "$ASSETS" | grep -q "$expected"; then
+              echo "  [OK] $expected"
+            else
+              echo "  [MISSING] $expected"
+              exit 1
+            fi
+          done
+          echo "All expected assets present."

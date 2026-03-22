@@ -17,15 +17,23 @@ export default {
       return Response.redirect(`${RAW_BASE}/install-w.sh`, 302);
     }
 
+    // /uninstall.sh — remove binary and config
+    if (path === "/uninstall.sh") {
+      return Response.redirect(`${RAW_BASE}/uninstall.sh`, 302);
+    }
+
     return new Response(
       [
         "OpenCERN CLI Installer",
         "",
-        "macOS / Linux:",
-        "  curl -fsSL https://opencern.northstarcorp.co/install.sh | sh",
+        "Install:",
+        "  macOS / Linux:    curl -fsSL https://opencern.northstarcorp.co/install.sh | sh",
+        "  Windows:          curl -fsSL https://opencern.northstarcorp.co/install-w.sh | sh",
         "",
-        "Windows (Git Bash):",
-        "  curl -fsSL https://opencern.northstarcorp.co/install-w.sh | sh",
+        "Uninstall:",
+        "  macOS / Linux:    curl -fsSL https://opencern.northstarcorp.co/uninstall.sh | sh",
+        "",
+        "After install, run:  opencern",
       ].join("\n"),
       {
         status: 200,

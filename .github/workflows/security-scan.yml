@@ -90,6 +90,9 @@ jobs:
           - name: quantum
             context: opencern-cli/quantum
             dockerfile: opencern-cli/quantum/Dockerfile
+          - name: data-processor
+            context: containers/data-processor
+            dockerfile: containers/data-processor/Dockerfile
     steps:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx

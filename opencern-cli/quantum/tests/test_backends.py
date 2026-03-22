@@ -2,9 +2,6 @@
 Tests for /backends listing and /backend switching.
 """
 import pytest
-from conftest import skip_no_deps
-
-pytestmark = skip_no_deps
 
 
 def test_list_backends(client):

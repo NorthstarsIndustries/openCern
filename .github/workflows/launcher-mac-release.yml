@@ -3,7 +3,7 @@ name: macOS Launcher Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "app-v*.*.*"
   workflow_dispatch:
 
 permissions:

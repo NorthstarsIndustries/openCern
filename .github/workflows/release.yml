@@ -1,92 +1,20 @@
-name: Release
+# DEPRECATED: This workflow is replaced by cli-release.yml (cli-v* tags)
+# and launcher-release.yml / launcher-mac-release.yml (app-v* tags).
+# Kept as a no-op to avoid breaking references. Will be removed in a future cleanup.
+name: Release (deprecated)
 
 on:
   push:
     tags:
-      - 'v*.*.*'
-
-permissions:
-  contents: write
+      - "v*.*.*"
 
 jobs:
-  build-binaries:
-    name: Build standalone binaries
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            artifact: opencern-linux
-            node-pkg: pkg-linux
-          - os: macos-latest
-            artifact: opencern-macos
-            node-pkg: pkg-macos
-          - os: windows-latest
-            artifact: opencern-win.exe
-            node-pkg: pkg-win
-
-    defaults:
-      run:
-        working-directory: opencern-cli
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: opencern-cli/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build TypeScript
-        run: npm run build
-
-      - name: Package binary (pkg)
-        run: |
-          npx pkg . --targets node20-${{ matrix.node-pkg }} --output ${{ matrix.artifact }} --compress GZip
-        continue-on-error: true  # pkg may not work for all targets
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: opencern-cli/${{ matrix.artifact }}
-          if-no-files-found: warn
-
-  create-release:
-    name: Create GitHub Release
-    needs: build-binaries
+  notice:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-
-      - name: Generate changelog
-        id: changelog
+      - name: Deprecation notice
         run: |
-          echo "## What's Changed" > CHANGELOG.md
-          git log --oneline $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md || echo "Initial release" >> CHANGELOG.md
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          body_file: CHANGELOG.md
-          draft: false
-          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
-          files: |
-            artifacts/**/*
-            scripts/install.sh
-            scripts/install-w.sh
-
-  trigger-docker-publish:
-    name: Trigger Docker publish
-    needs: create-release
-    uses: ./.github/workflows/docker-publish.yml
-    secrets: inherit
+          echo "::warning::This workflow is deprecated."
+          echo "Use 'cli-v*.*.*' tags for CLI releases (cli-release.yml)"
+          echo "Use 'app-v*.*.*' tags for desktop app releases (launcher-release.yml)"
+          exit 0

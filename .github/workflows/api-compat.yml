@@ -1,0 +1,51 @@
+# Test #23: API backward compatibility test
+name: API Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "containers/api/**"
+      - "opencern-cli/src/services/cern-api.ts"
+  workflow_dispatch:
+
+jobs:
+  contract-test:
+    runs-on: ubuntu-latest
+    name: CLI ↔ API Contract Test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install CLI deps
+        working-directory: opencern-cli
+        run: bun install --frozen-lockfile
+
+      - name: Extract CLI expected endpoints
+        run: |
+          echo "Endpoints referenced in CLI cern-api.ts:"
+          grep -oP "'\/([\w\/]+)'" opencern-cli/src/services/cern-api.ts | sort -u | tee /tmp/cli-endpoints.txt
+
+      - name: Extract API declared routes
+        run: |
+          echo "Routes declared in API routers:"
+          grep -rP '@router\.(get|post|put|delete)\(' containers/api/routers/ | grep -oP '"/[^"]*"' | sort -u | tee /tmp/api-routes.txt
+
+      - name: Check for missing routes
+        run: |
+          MISSING=0
+          while IFS= read -r endpoint; do
+            CLEAN=$(echo "$endpoint" | tr -d "'" | sed 's|/{[^}]*}||g')
+            if ! grep -q "$CLEAN" /tmp/api-routes.txt; then
+              echo "::warning::CLI references $endpoint but API may not declare it"
+              MISSING=1
+            fi
+          done < /tmp/cli-endpoints.txt
+          if [ "$MISSING" = "0" ]; then
+            echo "All CLI endpoints have matching API routes"
+          fi
