@@ -40,14 +40,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build TypeScript
-        run: bun run build
-
       - name: Compile standalone binary
-        shell: bash
-        run: |
-          rm -f bunfig.toml
-          bun build ./bin/opencern.js --compile --outfile ${{ matrix.artifact }}
+        run: bun run compile ${{ matrix.artifact }}
 
       # Test #2: Compile smoke test — verify binary starts
       - name: Smoke test — binary runs

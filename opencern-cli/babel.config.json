@@ -1,6 +1,0 @@
-{
-  "presets": [
-    ["babel-preset-solid", { "generate": "universal", "moduleName": "@opentui/solid" }],
-    ["@babel/preset-typescript", { "isTSX": true, "allExtensions": true }]
-  ]
-}

@@ -49,7 +49,7 @@ if (debugMode) {
 
 // Launch the TUI app
 try {
-  const { startApp } = await import('../dist/app.js');
+  const { startApp } = await import('../src/app.tsx');
   await startApp();
 } catch (err) {
   if (err.code === 'ERR_MODULE_NOT_FOUND' || err.code === 'MODULE_NOT_FOUND') {
