@@ -171,7 +171,8 @@ export const anthropicService = {
         const client = getClient();
         const model = config.get('defaultModel');
         _history.push({ role: 'user', content: userMessage });
-        const messages = _history.map(m => ({
+        const trimmed = _history.length > 40 ? _history.slice(-40) : _history;
+        const messages = trimmed.map(m => ({
             role: m.role,
             content: m.content,
         }));
@@ -219,7 +220,8 @@ export const anthropicService = {
                 onEvent({ type: 'done' });
                 return;
             }
-            const messages = _history.map(m => ({
+            const trimmed = _history.length > 40 ? _history.slice(-40) : _history;
+            const messages = trimmed.map(m => ({
                 role: m.role,
                 content: m.content,
             }));

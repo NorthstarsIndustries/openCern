@@ -13,8 +13,12 @@ export async function startDownload(dataset, fileNames) {
     const result = await cernApi.startDownload(dataset, fileNames);
     return result.id;
 }
-export async function pollDownload(id, onProgress) {
+export async function pollDownload(id, onProgress, maxPollMs = 10 * 60 * 1000) {
+    const start = Date.now();
     while (true) {
+        if (Date.now() - start > maxPollMs) {
+            throw new Error('Download poll timed out after 10 minutes');
+        }
         const status = await cernApi.downloadStatus(id);
         onProgress(status);
         if (status.status === 'done' || status.status === 'error' || status.status === 'cancelled') {

@@ -5,7 +5,9 @@
  * Unauthorized copying, modification, or distribution is strictly prohibited.
  * See LICENSE.enterprise for full terms.
  */
-import axios, { AxiosError } from 'axios';
+import { AxiosError } from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 import { config } from '../utils/config.js';
 import { getToken } from '../utils/auth.js';
 function normalizeError(err) {
@@ -72,9 +74,10 @@ async function withRetry(fn, attempts = 3) {
     }
     throw lastErr;
 }
-function createClient() {
+async function createClient() {
     const baseURL = config.get('apiBaseUrl');
     const token = getToken();
+    const axios = await getAxios();
     const client = axios.create({
         baseURL,
         timeout: 30000,
@@ -88,13 +91,13 @@ function createClient() {
 export const cernApi = {
     async health() {
         return withRetry(async () => {
-            const res = await createClient().get('/health');
+            const res = await (await createClient()).get('/health');
             return res.data;
         });
     },
     async searchDatasets(query, experiment = 'all', year) {
         return withRetry(async () => {
-            const res = await createClient().get('/datasets', {
+            const res = await (await createClient()).get('/datasets', {
                 params: { experiment, size: 50 },
             });
             let datasets = res.data.datasets || [];
@@ -113,7 +116,7 @@ export const cernApi = {
     async startDownload(dataset, selectedFiles) {
         return withRetry(async () => {
             const files = selectedFiles && selectedFiles.length > 0 ? selectedFiles : dataset.files;
-            const res = await createClient().post('/download/multi', {
+            const res = await (await createClient()).post('/download/multi', {
                 dataset_title: dataset.title,
                 files
             });
@@ -123,21 +126,21 @@ export const cernApi = {
         });
     },
     async downloadStatus(id) {
-        const res = await createClient().get('/download/status', { params: { filename: id } });
+        const res = await (await createClient()).get('/download/status', { params: { filename: id } });
         return res.data;
     },
     async cancelDownload(id) {
-        await createClient().post('/downloads/cancel', { id });
+        await (await createClient()).post('/downloads/cancel', { id });
     },
     async listFiles(folder) {
         return withRetry(async () => {
             const path = folder ? `/files/${folder}` : '/files';
-            const res = await createClient().get(path);
+            const res = await (await createClient()).get(path);
             return res.data;
         });
     },
     async deleteFile(name) {
-        await createClient().delete(`/files/${encodeURIComponent(name)}`);
+        await (await createClient()).delete(`/files/${encodeURIComponent(name)}`);
     },
     async processFile(filePath) {
         return withRetry(async () => {
@@ -146,7 +149,7 @@ export const cernApi = {
             // If still looks absolute, just use the basename
             if (relative.startsWith('/'))
                 relative = relative.split('/').pop() || relative;
-            const res = await createClient().post('/process', null, {
+            const res = await (await createClient()).post('/process', null, {
                 params: { filename: relative },
             });
             if (res.data.error)
@@ -159,7 +162,7 @@ export const cernApi = {
             let relative = folderPath.replace(/^~?\/.*\/opencern-datasets\/data\//, '');
             if (relative.startsWith('/'))
                 relative = relative.split('/').pop() || relative;
-            const res = await createClient().post('/process/folder', null, {
+            const res = await (await createClient()).post('/process/folder', null, {
                 params: { folder: relative },
             });
             if (res.data.error)
@@ -168,12 +171,12 @@ export const cernApi = {
         });
     },
     async processStatus(id) {
-        const res = await createClient().get('/process/status', { params: { filename: id } });
+        const res = await (await createClient()).get('/process/status', { params: { filename: id } });
         return res.data;
     },
     async getRootMetadata(filePath) {
         return withRetry(async () => {
-            const res = await createClient().get('/files/root-metadata', { params: { file: filePath } });
+            const res = await (await createClient()).get('/files/root-metadata', { params: { file: filePath } });
             return res.data;
         });
     },

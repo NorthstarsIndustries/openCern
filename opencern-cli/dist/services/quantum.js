@@ -5,15 +5,16 @@
  * Unauthorized copying, modification, or distribution is strictly prohibited.
  * See LICENSE.enterprise for full terms.
  */
-import axios from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 const QUANTUM_BASE = 'http://localhost:8082';
-function client() {
-    return axios.create({ baseURL: QUANTUM_BASE, timeout: 10000 });
+async function client() {
+    return (await getAxios()).create({ baseURL: QUANTUM_BASE, timeout: 10000 });
 }
 export const quantumService = {
     async getStatus() {
         try {
-            const res = await client().get('/health');
+            const res = await (await client()).get('/health');
             return res.data;
         }
         catch {
@@ -21,23 +22,23 @@ export const quantumService = {
         }
     },
     async classify(request) {
-        const res = await client().post('/classify', request);
+        const res = await (await client()).post('/classify', request);
         return res.data;
     },
     async getResults(jobId) {
-        const res = await client().get(`/results/${jobId}`);
+        const res = await (await client()).get(`/results/${jobId}`);
         return res.data;
     },
     async setBackend(backend, apiKey) {
-        await client().post('/backend', { backend, apiKey });
+        await (await client()).post('/backend', { backend, apiKey });
     },
     async listBackends() {
-        const res = await client().get('/backends');
+        const res = await (await client()).get('/backends');
         return res.data;
     },
     async getCircuitDiagram(numQubits, layers) {
         try {
-            const res = await client().get('/circuit', { params: { qubits: numQubits, layers } });
+            const res = await (await client()).get('/circuit', { params: { qubits: numQubits, layers } });
             return res.data.diagram;
         }
         catch {

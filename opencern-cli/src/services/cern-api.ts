@@ -6,7 +6,8 @@
  * See LICENSE.enterprise for full terms.
  */
 
-import type { AxiosInstance, AxiosError } from 'axios';
+import type { AxiosInstance } from 'axios';
+import type { AxiosError } from 'axios';
 // Lazy-load axios to avoid follow-redirects initialization issues with Bun
 const getAxios = () => import('axios').then(m => m.default);
 import { config } from '../utils/config.js';
@@ -58,7 +59,7 @@ export interface LocalFile {
 }
 
 function normalizeError(err: unknown): Error {
-  if (err instanceof AxiosError) {
+  if (err && typeof err === "object" && "isAxiosError" in (err as any)) {
     const code = err.response?.status;
     const retryable = !code || code >= 500 || code === 429;
     let msg: string;

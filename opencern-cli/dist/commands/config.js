@@ -7,7 +7,8 @@
  */
 import { setKey, getKey, hasKey, maskKey, deleteKey } from '../utils/keystore.js';
 import { config } from '../utils/config.js';
-import axios from 'axios';
+// Lazy-load axios to avoid follow-redirects initialization issues with Bun
+const getAxios = () => import('axios').then(m => m.default);
 export function getConfigItems() {
     return [
         {
@@ -69,12 +70,14 @@ export async function setConfigValue(key, value) {
     switch (key) {
         case 'anthropic-key': {
             try {
+                const axios = await getAxios();
                 await axios.get('https://api.anthropic.com/v1/models', {
                     headers: { 'x-api-key': value, 'anthropic-version': '2023-06-01' },
                     timeout: 8000,
                 });
             }
             catch (err) {
+                const axios = await getAxios();
                 if (axios.isAxiosError(err) && err.response?.status === 401) {
                     return { success: false, error: 'Invalid Anthropic API key' };
                 }

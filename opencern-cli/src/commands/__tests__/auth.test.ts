@@ -32,6 +32,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+async function flushAsync(ms = 0) {
+  await vi.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(0);
+}
+
 describe('login', () => {
   it('should initiate device code flow and return success on authorization', async () => {
     const onCode = vi.fn();
@@ -47,7 +52,9 @@ describe('login', () => {
 
     const loginPromise = login(onCode, onWaiting);
 
-    await vi.advanceTimersByTimeAsync(2100);
+    await flushAsync(0);
+    await flushAsync(2500);
+    await flushAsync(0);
 
     const result = await loginPromise;
 
@@ -75,7 +82,11 @@ describe('login', () => {
     vi.mocked(axios.get).mockResolvedValue({ data: { status: 'expired' } } as any);
 
     const loginPromise = login(vi.fn(), vi.fn());
-    await vi.advanceTimersByTimeAsync(2100);
+
+    await flushAsync(0);
+    await flushAsync(2500);
+    await flushAsync(0);
+
     const result = await loginPromise;
 
     expect(result.success).toBe(false);

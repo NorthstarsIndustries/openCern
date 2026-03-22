@@ -33,6 +33,11 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+async function flushAsync(ms = 0) {
+  await vi.advanceTimersByTimeAsync(ms);
+  await vi.advanceTimersByTimeAsync(0);
+}
+
 describe('auth E2E flow', () => {
   it('should complete full login -> getUsername -> logout flow', async () => {
     vi.mocked(axios.post).mockResolvedValueOnce({
@@ -46,7 +51,11 @@ describe('auth E2E flow', () => {
     const onCode = vi.fn();
     const onWaiting = vi.fn();
     const loginPromise = login(onCode, onWaiting);
-    await vi.advanceTimersByTimeAsync(2100);
+
+    await flushAsync(0);
+    await flushAsync(2500);
+    await flushAsync(0);
+
     const result = await loginPromise;
 
     expect(result.success).toBe(true);
@@ -86,12 +95,15 @@ describe('auth E2E flow', () => {
 
     const loginPromise = login(vi.fn(), vi.fn());
 
-    await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 5000);
+    // Advance in chunks to let dynamic import microtasks settle between poll cycles
+    for (let i = 0; i < 160; i++) {
+      await flushAsync(2500);
+    }
 
     const result = await loginPromise;
     expect(result.success).toBe(false);
     expect(result.error).toContain('timed out');
-  });
+  }, 15000);
 
   it('should handle logout when no token exists', async () => {
     vi.mocked(getKey).mockReturnValue(null);

@@ -5,8 +5,6 @@
  * Unauthorized copying, modification, or distribution is strictly prohibited.
  * See LICENSE.enterprise for full terms.
  */
-import React from 'react';
-declare function App(): React.JSX.Element;
 export declare function startApp(): Promise<void>;
-export default App;
+export default startApp;
 //# sourceMappingURL=app.d.ts.map

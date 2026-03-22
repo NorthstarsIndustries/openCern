@@ -25,7 +25,7 @@ function getDiskUsage(dir) {
     }
 }
 export async function getSystemStatus() {
-    const dockerRunning = docker.isDockerRunning();
+    const dockerRunning = await docker.isDockerRunning();
     const containers = dockerRunning ? docker.getStatus() : {};
     let apiHealthy = false;
     let responseTime;
@@ -45,7 +45,7 @@ export async function getSystemStatus() {
     const dataDir = config.get('dataDir');
     const disk = getDiskUsage(dataDir);
     return {
-        docker: { running: dockerRunning },
+        docker: { running: Boolean(dockerRunning) },
         containers,
         api: { healthy: apiHealthy, responseTime, version: apiVersion },
         quantum: { healthy: quantumHealthy },
