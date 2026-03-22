@@ -6,7 +6,7 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Install Python dependencies for data processor
-RUN pip install --no-cache-dir uproot awkward numpy tqdm
+RUN pip install --no-cache-dir uproot awkward numpy tqdm pandas pylhe pyhepmc pyarrow h5py
 
 # Copy the script
 COPY main.py .

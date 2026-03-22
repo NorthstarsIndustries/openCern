@@ -50,11 +50,11 @@ describe('login', () => {
       data: { status: 'authorized', token: 'jwt-token-xyz', username: 'testuser' },
     } as any);
 
-    const loginPromise = login(onCode, onWaiting);
+    const loginPromise = login(onCode, onWaiting, { pollIntervalMs: 1, maxPollAttempts: 5 });
 
-    await flushAsync(0);
-    await flushAsync(2500);
-    await flushAsync(0);
+    for (let i = 0; i < 10; i++) {
+      await vi.advanceTimersByTimeAsync(10);
+    }
 
     const result = await loginPromise;
 
@@ -74,18 +74,19 @@ describe('login', () => {
     expect(result.error).toBeDefined();
   });
 
-  it('should handle poll returning expired status', { timeout: 15000 }, async () => {
+  it('should handle poll returning expired status', async () => {
     vi.mocked(axios.post).mockResolvedValueOnce({
       data: { code: 'EXPIRED', expiresAt: new Date(Date.now() + 300_000).toISOString() },
     } as any);
 
     vi.mocked(axios.get).mockResolvedValue({ data: { status: 'expired' } } as any);
 
-    const loginPromise = login(vi.fn(), vi.fn());
+    const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 2 });
 
-    await flushAsync(0);
-    await flushAsync(2500);
-    await flushAsync(0);
+    // Advance in small chunks to allow dynamic import microtasks to settle
+    for (let i = 0; i < 10; i++) {
+      await vi.advanceTimersByTimeAsync(10);
+    }
 
     const result = await loginPromise;
 

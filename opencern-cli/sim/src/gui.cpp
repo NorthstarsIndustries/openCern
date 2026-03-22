@@ -146,6 +146,25 @@ bool GUI::render(const Event& event, int& currentEvent, int totalEvents,
             ImGui::TextColored(kAccentCyan, " %s", event.experiment.c_str());
         }
 
+        // Format badge
+        if (!loader.sourceFormat().empty() && loader.sourceFormat() != "json") {
+            char fmtBuf[32];
+            snprintf(fmtBuf, sizeof(fmtBuf), "Format: %s", loader.sourceFormat().c_str());
+            for (char* c = fmtBuf + 8; *c; c++) *c = toupper(*c);
+            ImGui::TextColored(kTextDim, "%s", fmtBuf);
+        }
+
+        // Experiment badge from metadata
+        if (!loader.sourceExperiment().empty()) {
+            ImGui::SameLine();
+            ImGui::TextColored(kAccentCyan, "[%s]", loader.sourceExperiment().c_str());
+        }
+
+        // Synthetic data warning
+        if (loader.isSynthetic()) {
+            ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.0f, 1.0f), "SYNTHETIC DATA");
+        }
+
         ImGui::Separator();
         ImGui::Spacing();
 

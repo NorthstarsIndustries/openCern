@@ -1,13 +1,15 @@
 """
-OpenCERN Data Processor — Multi-Experiment ROOT → JSON Pipeline
+OpenCERN Data Processor — Multi-Format HEP → JSON Pipeline
 ================================================================
-Supports CMS (NanoAOD), ATLAS (flat ntuples), and ALICE (VSD/ESD)
-with smart auto-detection and vectorized Awkward Array processing.
+Supports ROOT (CMS NanoAOD, ATLAS flat ntuples, ALICE VSD/ESD),
+CSV, TSV, LHE, HepMC, Parquet, HDF5, YODA, and plain-text NTuples.
 
 Usage:
   python main.py ~/opencern-datasets/data/TTbar.root
   python main.py data/*.root --experiment atlas --workers 4
-  python main.py data/alice/ --experiment alice --max-events 10000
+  python main.py data/events.csv --experiment cms
+  python main.py data/pythia.lhe.gz
+  python main.py data/mc_output.hepmc
 """
 
 import uproot
@@ -266,6 +268,647 @@ def vec_leading_pt(*pt_arrays):
     for m in maxes[1:]:
         combined = np.maximum(combined, m)
     return combined
+
+
+# ──────────────────────────────────────────────────────────────────
+# Multi-Format Support — Shared Helpers
+# ──────────────────────────────────────────────────────────────────
+SUPPORTED_EXTENSIONS = {
+    '.root': 'root', '.csv': 'csv', '.tsv': 'tsv',
+    '.lhe': 'lhe', '.lhe.gz': 'lhe',
+    '.hepmc': 'hepmc', '.hepmc2': 'hepmc', '.hepmc3': 'hepmc',
+    '.parquet': 'parquet',
+    '.hdf5': 'hdf5', '.h5': 'hdf5',
+    '.yoda': 'yoda',
+    '.dat': 'ntuple', '.txt': 'ntuple', '.ntuple': 'ntuple',
+}
+
+PDG_MAP = {
+    11: "electron", -11: "electron", 13: "muon", -13: "muon",
+    15: "tau", -15: "tau", 22: "photon",
+    12: "neutrino", -12: "neutrino", 14: "neutrino", -14: "neutrino",
+    16: "neutrino", -16: "neutrino",
+    1: "jet", -1: "jet", 2: "jet", -2: "jet", 3: "jet", -3: "jet",
+    4: "jet", -4: "jet", 5: "jet", -5: "jet", 21: "jet",
+    111: "photon", 211: "jet", -211: "jet",
+    321: "jet", -321: "jet",
+    2212: "jet", -2212: "jet",
+}
+
+COLORS = {
+    "muon": "#ff6b6b", "electron": "#7fbbb3", "jet": "#dbbc7f",
+    "tau": "#d699b6", "photon": "#a7c080", "neutrino": "#83c092",
+    "track": "#7fbbb3", "unknown": "#ffffff",
+}
+
+
+def make_particle(ptype, pt, eta, phi, mass=0.0, energy=None,
+                  charge=None, pdg_id=None, px=None, py=None, pz=None):
+    """Standardized particle dict builder."""
+    if px is None or py is None or pz is None:
+        px_c, py_c, pz_c, e_c = vec_to_cartesian(
+            np.array([pt]), np.array([eta]), np.array([phi]), np.array([mass]))
+        px, py, pz = float(px_c[0]), float(py_c[0]), float(pz_c[0])
+        if energy is None:
+            energy = float(e_c[0])
+    if energy is None:
+        energy = float(np.sqrt(px**2 + py**2 + pz**2 + mass**2))
+    p = {"type": ptype, "color": COLORS.get(ptype, "#ffffff"),
+         "pt": round(float(pt), 3), "eta": round(float(eta), 3),
+         "phi": round(float(phi), 3), "mass": round(float(mass), 4),
+         "px": round(float(px), 3), "py": round(float(py), 3),
+         "pz": round(float(pz), 3), "energy": round(float(energy), 3)}
+    if charge is not None:
+        p["charge"] = int(charge)
+    if pdg_id is not None:
+        p["pdg_id"] = int(pdg_id)
+    return p
+
+
+def write_output(filepath, format_name, experiment, events, total_scanned, elapsed, extra_meta=None):
+    """Write standardized JSON output for any format."""
+    filename = Path(filepath).stem
+    output_dir = os.path.expanduser("~/opencern-datasets/processed/")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, f"{filename}.json")
+    metadata = {
+        "source": os.path.basename(filepath), "format": format_name,
+        "experiment": experiment.upper(), "events": len(events),
+        "processed": datetime.now().isoformat(),
+        "total_scanned": total_scanned, "processing_time_sec": round(elapsed, 2),
+    }
+    if extra_meta:
+        metadata.update(extra_meta)
+    output = {"metadata": metadata, "events": events}
+    with open(output_path, "w") as f:
+        json.dump(output, f, separators=(",", ":"))
+    size_mb = os.path.getsize(output_path) / (1024 * 1024)
+    log.info(f"Wrote {len(events)} events to {output_path} ({size_mb:.1f} MB)")
+    return output_path
+
+
+# ──────────────────────────────────────────────────────────────────
+# Multi-Format Parsers
+# ──────────────────────────────────────────────────────────────────
+
+def _detect_columns(df):
+    """Auto-detect column roles from a DataFrame using case-insensitive matching."""
+    cols = {c.lower(): c for c in df.columns}
+    mapping = {}
+    # Direct matches
+    for field in ['pt', 'eta', 'phi', 'mass', 'px', 'py', 'pz', 'energy',
+                  'pdg_id', 'type', 'charge', 'event_id']:
+        if field in cols:
+            mapping[field] = cols[field]
+    # CMS-style: Muon_pt etc.
+    for c in df.columns:
+        cl = c.lower()
+        if cl.startswith('muon_') or cl.startswith('electron_') or cl.startswith('jet_'):
+            mapping.setdefault('_cms_style', True)
+            break
+    # ATLAS-style: lep_pt etc.
+    for c in df.columns:
+        cl = c.lower()
+        if cl.startswith('lep_') or cl.startswith('jet_'):
+            mapping.setdefault('_atlas_style', True)
+            break
+    # Event grouping column
+    for candidate in ['event_id', 'event', 'entry', 'eventid', 'evt']:
+        if candidate in cols:
+            mapping['_group_col'] = cols[candidate]
+            break
+    return mapping
+
+
+def _cartesian_to_cylindrical(px, py, pz):
+    """Convert px/py/pz to pt/eta/phi."""
+    pt = np.sqrt(px**2 + py**2)
+    p = np.sqrt(px**2 + py**2 + pz**2)
+    eta = np.where(p > pt, np.arctanh(np.clip(pz / np.maximum(p, 1e-10), -1+1e-10, 1-1e-10)), 0.0)
+    phi = np.arctan2(py, px)
+    return pt, eta, phi
+
+
+def process_csv_file(filepath, max_events=5000, experiment="auto", delimiter=','):
+    """Process CSV/TSV files with auto-detected columns."""
+    import pandas as pd
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    fmt = 'tsv' if delimiter == '\t' else 'csv'
+    log.info(f"Processing {fmt.upper()} file: {filepath}")
+
+    df = pd.read_csv(filepath, delimiter=delimiter)
+    col_map = _detect_columns(df)
+
+    if experiment == "auto":
+        if col_map.get('_cms_style'):
+            experiment = "cms"
+        elif col_map.get('_atlas_style'):
+            experiment = "atlas"
+        else:
+            experiment = "generic"
+
+    group_col = col_map.get('_group_col')
+    events = []
+
+    if group_col:
+        groups = df.groupby(group_col)
+    else:
+        groups = [(i, df.iloc[[i]]) for i in range(len(df))]
+
+    for event_id, group in groups:
+        if len(events) >= max_events:
+            break
+        particles = []
+        for _, row in (group.iterrows() if hasattr(group, 'iterrows') else [(0, group.iloc[0])]):
+            row_dict = row.to_dict() if hasattr(row, 'to_dict') else dict(row)
+            # Determine pt/eta/phi/mass or compute from px/py/pz
+            has_cyl = all(k in col_map for k in ['pt', 'eta', 'phi'])
+            has_cart = all(k in col_map for k in ['px', 'py', 'pz'])
+
+            if has_cyl:
+                pt = float(row_dict[col_map['pt']])
+                eta = float(row_dict[col_map['eta']])
+                phi = float(row_dict[col_map['phi']])
+                mass = float(row_dict.get(col_map.get('mass', ''), 0) or 0)
+                px_v = float(row_dict[col_map['px']]) if has_cart else None
+                py_v = float(row_dict[col_map['py']]) if has_cart else None
+                pz_v = float(row_dict[col_map['pz']]) if has_cart else None
+                energy = float(row_dict[col_map['energy']]) if 'energy' in col_map else None
+            elif has_cart:
+                px_v = float(row_dict[col_map['px']])
+                py_v = float(row_dict[col_map['py']])
+                pz_v = float(row_dict[col_map['pz']])
+                pt_a, eta_a, phi_a = _cartesian_to_cylindrical(
+                    np.array([px_v]), np.array([py_v]), np.array([pz_v]))
+                pt, eta, phi = float(pt_a[0]), float(eta_a[0]), float(phi_a[0])
+                mass = float(row_dict.get(col_map.get('mass', ''), 0) or 0)
+                energy = float(row_dict[col_map['energy']]) if 'energy' in col_map else None
+            else:
+                continue
+
+            ptype = str(row_dict.get(col_map.get('type', ''), 'track'))
+            if 'pdg_id' in col_map:
+                pdg = int(row_dict[col_map['pdg_id']])
+                ptype = PDG_MAP.get(pdg, 'unknown')
+            else:
+                pdg = None
+            charge = int(row_dict[col_map['charge']]) if 'charge' in col_map else None
+
+            particles.append(make_particle(
+                ptype, pt, eta, phi, mass=mass, energy=energy,
+                charge=charge, pdg_id=pdg, px=px_v, py=py_v, pz=pz_v))
+
+        if particles:
+            events.append({
+                "event_id": int(event_id) if not isinstance(event_id, tuple) else len(events),
+                "experiment": experiment.upper(),
+                "particles": particles,
+            })
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, fmt, experiment, events, len(df), elapsed)
+
+
+def process_lhe_file(filepath, max_events=5000):
+    """Process LHE (Les Houches Event) files."""
+    import pylhe
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    log.info(f"Processing LHE file: {filepath}")
+
+    events = []
+    total = 0
+    for lhe_event in pylhe.read_lhe_with_attributes(filepath):
+        total += 1
+        if len(events) >= max_events:
+            continue
+        particles = []
+        for p in lhe_event.particles:
+            if p.status != 1:
+                continue
+            px, py, pz, e = p.px, p.py, p.pz, p.e
+            pt = np.sqrt(px**2 + py**2)
+            p_mag = np.sqrt(px**2 + py**2 + pz**2)
+            eta = float(np.arctanh(np.clip(pz / max(p_mag, 1e-10), -1+1e-10, 1-1e-10)))
+            phi = float(np.arctan2(py, px))
+            ptype = PDG_MAP.get(p.id, "unknown")
+            charge = int(round(p.spin)) if hasattr(p, 'spin') else None
+            particles.append(make_particle(
+                ptype, pt, eta, phi, mass=p.m, energy=e,
+                pdg_id=p.id, px=px, py=py, pz=pz, charge=charge))
+        if particles:
+            events.append({
+                "event_id": total,
+                "experiment": "GENERIC",
+                "particles": particles,
+            })
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, "lhe", "generic", events, total, elapsed)
+
+
+def process_hepmc_file(filepath, max_events=5000):
+    """Process HepMC2/HepMC3 files."""
+    import pyhepmc
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    log.info(f"Processing HepMC file: {filepath}")
+
+    events = []
+    total = 0
+    with pyhepmc.open(filepath) as f:
+        for hepmc_event in f:
+            total += 1
+            if len(events) >= max_events:
+                continue
+            particles = []
+            for p in hepmc_event.particles:
+                if p.status != 1:
+                    continue
+                mom = p.momentum
+                px, py, pz, e = mom.px, mom.py, mom.pz, mom.e
+                pt = np.sqrt(px**2 + py**2)
+                p_mag = np.sqrt(px**2 + py**2 + pz**2)
+                eta = float(np.arctanh(np.clip(pz / max(p_mag, 1e-10), -1+1e-10, 1-1e-10)))
+                phi = float(np.arctan2(py, px))
+                ptype = PDG_MAP.get(p.pid, "unknown")
+                mass = p.generated_mass if hasattr(p, 'generated_mass') and p.generated_mass else 0.0
+                particles.append(make_particle(
+                    ptype, pt, eta, phi, mass=mass, energy=e,
+                    pdg_id=p.pid, px=px, py=py, pz=pz))
+            if particles:
+                events.append({
+                    "event_id": total,
+                    "experiment": "GENERIC",
+                    "particles": particles,
+                })
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, "hepmc", "generic", events, total, elapsed)
+
+
+def process_parquet_file(filepath, max_events=5000, experiment="auto"):
+    """Process Parquet files (e.g. CMS NanoAOD exports)."""
+    import pyarrow.parquet as pq
+    import pandas as pd
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    log.info(f"Processing Parquet file: {filepath}")
+
+    pf = pq.ParquetFile(filepath)
+    all_rows = []
+    for batch in pf.iter_batches(batch_size=50000):
+        all_rows.append(batch.to_pandas())
+        if sum(len(r) for r in all_rows) > max_events * 10:
+            break
+    df = pd.concat(all_rows, ignore_index=True)
+
+    # Reuse CSV-style column detection and processing
+    col_map = _detect_columns(df)
+    if experiment == "auto":
+        if col_map.get('_cms_style'):
+            experiment = "cms"
+        elif col_map.get('_atlas_style'):
+            experiment = "atlas"
+        else:
+            experiment = "generic"
+
+    group_col = col_map.get('_group_col')
+    events = []
+
+    if group_col:
+        groups = df.groupby(group_col)
+    else:
+        groups = [(i, df.iloc[[i]]) for i in range(len(df))]
+
+    for event_id, group in groups:
+        if len(events) >= max_events:
+            break
+        particles = []
+        for _, row in (group.iterrows() if hasattr(group, 'iterrows') else [(0, group.iloc[0])]):
+            row_dict = row.to_dict()
+            has_cyl = all(k in col_map for k in ['pt', 'eta', 'phi'])
+            has_cart = all(k in col_map for k in ['px', 'py', 'pz'])
+            if has_cyl:
+                pt = float(row_dict[col_map['pt']])
+                eta = float(row_dict[col_map['eta']])
+                phi = float(row_dict[col_map['phi']])
+                mass = float(row_dict.get(col_map.get('mass', ''), 0) or 0)
+                px_v = float(row_dict[col_map['px']]) if has_cart else None
+                py_v = float(row_dict[col_map['py']]) if has_cart else None
+                pz_v = float(row_dict[col_map['pz']]) if has_cart else None
+                energy = float(row_dict[col_map['energy']]) if 'energy' in col_map else None
+            elif has_cart:
+                px_v = float(row_dict[col_map['px']])
+                py_v = float(row_dict[col_map['py']])
+                pz_v = float(row_dict[col_map['pz']])
+                pt_a, eta_a, phi_a = _cartesian_to_cylindrical(
+                    np.array([px_v]), np.array([py_v]), np.array([pz_v]))
+                pt, eta, phi = float(pt_a[0]), float(eta_a[0]), float(phi_a[0])
+                mass = float(row_dict.get(col_map.get('mass', ''), 0) or 0)
+                energy = float(row_dict[col_map['energy']]) if 'energy' in col_map else None
+            else:
+                continue
+
+            ptype = str(row_dict.get(col_map.get('type', ''), 'track'))
+            pdg = int(row_dict[col_map['pdg_id']]) if 'pdg_id' in col_map else None
+            if pdg is not None:
+                ptype = PDG_MAP.get(pdg, 'unknown')
+            charge = int(row_dict[col_map['charge']]) if 'charge' in col_map else None
+            particles.append(make_particle(
+                ptype, pt, eta, phi, mass=mass, energy=energy,
+                charge=charge, pdg_id=pdg, px=px_v, py=py_v, pz=pz_v))
+
+        if particles:
+            events.append({
+                "event_id": int(event_id) if not isinstance(event_id, tuple) else len(events),
+                "experiment": experiment.upper(),
+                "particles": particles,
+            })
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, "parquet", experiment, events, len(df), elapsed)
+
+
+def process_hdf5_file(filepath, max_events=5000, experiment="auto"):
+    """Process HDF5 files by scanning for known dataset patterns."""
+    import h5py
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    log.info(f"Processing HDF5 file: {filepath}")
+
+    with h5py.File(filepath, 'r') as f:
+        datasets = {}
+        def visitor(name, obj):
+            if isinstance(obj, h5py.Dataset):
+                datasets[name] = obj.shape
+        f.visititems(visitor)
+
+        # Try to find pt/eta/phi datasets
+        ds_names = list(datasets.keys())
+        log.info(f"  Found {len(ds_names)} datasets in HDF5")
+
+        # Look for known patterns
+        pt_ds = eta_ds = phi_ds = mass_ds = energy_ds = None
+        pdg_ds = event_id_ds = None
+        for name in ds_names:
+            lower = name.lower().split('/')[-1]
+            if lower in ('pt', 'muon_pt', 'jet_pt', 'electron_pt') and pt_ds is None:
+                pt_ds = name
+            elif lower in ('eta', 'muon_eta', 'jet_eta', 'electron_eta') and eta_ds is None:
+                eta_ds = name
+            elif lower in ('phi', 'muon_phi', 'jet_phi', 'electron_phi') and phi_ds is None:
+                phi_ds = name
+            elif lower in ('mass', 'muon_mass', 'jet_mass') and mass_ds is None:
+                mass_ds = name
+            elif lower in ('energy', 'e') and energy_ds is None:
+                energy_ds = name
+            elif lower in ('pdg_id', 'pdgid', 'pid') and pdg_ds is None:
+                pdg_ds = name
+            elif lower in ('event_id', 'event', 'entry') and event_id_ds is None:
+                event_id_ds = name
+
+        if pt_ds is None or eta_ds is None or phi_ds is None:
+            log.error(f"  Cannot find pt/eta/phi datasets in HDF5. Available: {ds_names[:20]}")
+            sys.exit(1)
+
+        pt_arr = np.array(f[pt_ds][:])
+        eta_arr = np.array(f[eta_ds][:])
+        phi_arr = np.array(f[phi_ds][:])
+        mass_arr = np.array(f[mass_ds][:]) if mass_ds else np.zeros_like(pt_arr)
+        energy_arr = np.array(f[energy_ds][:]) if energy_ds else None
+        pdg_arr = np.array(f[pdg_ds][:]) if pdg_ds else None
+        event_id_arr = np.array(f[event_id_ds][:]) if event_id_ds else None
+
+    if experiment == "auto":
+        # Guess from dataset names
+        if any('Muon_' in n for n in ds_names):
+            experiment = "cms"
+        elif any('lep_' in n for n in ds_names):
+            experiment = "atlas"
+        else:
+            experiment = "generic"
+
+    events = []
+    total = len(pt_arr)
+
+    if event_id_arr is not None:
+        unique_events = np.unique(event_id_arr)
+        for eid in unique_events:
+            if len(events) >= max_events:
+                break
+            mask = event_id_arr == eid
+            particles = []
+            for j in np.where(mask)[0]:
+                ptype = PDG_MAP.get(int(pdg_arr[j]), "track") if pdg_arr is not None else "track"
+                e = float(energy_arr[j]) if energy_arr is not None else None
+                particles.append(make_particle(
+                    ptype, float(pt_arr[j]), float(eta_arr[j]), float(phi_arr[j]),
+                    mass=float(mass_arr[j]), energy=e,
+                    pdg_id=int(pdg_arr[j]) if pdg_arr is not None else None))
+            if particles:
+                events.append({
+                    "event_id": int(eid), "experiment": experiment.upper(),
+                    "particles": particles,
+                })
+    else:
+        for i in range(min(total, max_events)):
+            ptype = PDG_MAP.get(int(pdg_arr[i]), "track") if pdg_arr is not None else "track"
+            e = float(energy_arr[i]) if energy_arr is not None else None
+            p = make_particle(
+                ptype, float(pt_arr[i]), float(eta_arr[i]), float(phi_arr[i]),
+                mass=float(mass_arr[i]), energy=e,
+                pdg_id=int(pdg_arr[i]) if pdg_arr is not None else None)
+            events.append({
+                "event_id": i, "experiment": experiment.upper(),
+                "particles": [p],
+            })
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, "hdf5", experiment, events, total, elapsed)
+
+
+def process_yoda_file(filepath, max_events=5000):
+    """Process YODA histogram files by synthesizing pseudo-events from bins."""
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    log.info(f"Processing YODA file: {filepath}")
+
+    events = []
+    total_bins = 0
+    experiment = "generic"
+
+    with open(filepath, 'r') as f:
+        in_histo = False
+        histo_path = ""
+        for line in f:
+            line = line.strip()
+            if line.startswith("BEGIN HISTO1D"):
+                in_histo = True
+                histo_path = line.split()[-1] if len(line.split()) > 2 else ""
+                # Try to detect experiment from path
+                if "/ATLAS" in histo_path.upper():
+                    experiment = "atlas"
+                elif "/CMS" in histo_path.upper():
+                    experiment = "cms"
+                elif "/ALICE" in histo_path.upper():
+                    experiment = "alice"
+                continue
+            if line.startswith("END HISTO1D"):
+                in_histo = False
+                continue
+            if not in_histo or line.startswith("#") or line.startswith("---"):
+                continue
+            parts = line.split()
+            if len(parts) >= 3:
+                try:
+                    xlow = float(parts[0])
+                    xhigh = float(parts[1])
+                    sumw = float(parts[2])
+                    if sumw <= 0:
+                        continue
+                    total_bins += 1
+                    if len(events) >= max_events:
+                        continue
+                    bin_center = (xlow + xhigh) / 2.0
+                    events.append({
+                        "event_id": len(events) + 1,
+                        "experiment": experiment.upper(),
+                        "particles": [make_particle(
+                            "track", abs(bin_center), 0.0, 0.0,
+                            energy=abs(sumw))],
+                    })
+                except ValueError:
+                    continue
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, "yoda", experiment, events, total_bins, elapsed,
+                        extra_meta={"synthetic": True})
+
+
+def process_ntuple_file(filepath, max_events=5000, experiment="auto"):
+    """Process plain-text NTuple files (.dat, .txt)."""
+    filepath = os.path.expanduser(filepath)
+    t0 = time.perf_counter()
+    log.info(f"Processing NTuple file: {filepath}")
+
+    if experiment == "auto":
+        experiment = "generic"
+
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+
+    # Strip comments and empty lines
+    data_lines = []
+    header = None
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith('#'):
+            # Last comment line might be a header
+            header = stripped.lstrip('#').strip().split()
+            continue
+        # First non-comment line: check if it's a header
+        if header is None:
+            try:
+                [float(x) for x in stripped.split()]
+            except ValueError:
+                header = stripped.split()
+                continue
+        data_lines.append(stripped)
+
+    if not data_lines:
+        log.error("No data found in NTuple file")
+        sys.exit(1)
+
+    ncols = len(data_lines[0].split())
+
+    # Infer column meanings
+    if header and len(header) == ncols:
+        col_names = [h.lower() for h in header]
+    elif ncols == 4:
+        col_names = ['pt', 'eta', 'phi', 'mass']
+    elif ncols == 7:
+        col_names = ['px', 'py', 'pz', 'energy', 'mass', 'pdg_id', 'charge']
+    else:
+        log.error(f"Cannot infer columns for {ncols}-column NTuple (no header). "
+                  f"Hint: use 4 cols (pt eta phi mass) or 7 cols (px py pz energy mass pdg_id charge).")
+        sys.exit(1)
+
+    events = []
+    total = len(data_lines)
+    for i, line in enumerate(data_lines):
+        if len(events) >= max_events:
+            break
+        vals = line.split()
+        if len(vals) != ncols:
+            continue
+        try:
+            row = {col_names[j]: float(vals[j]) for j in range(ncols)}
+        except ValueError:
+            continue
+
+        if 'pt' in row and 'eta' in row and 'phi' in row:
+            pt, eta, phi = row['pt'], row['eta'], row['phi']
+            mass = row.get('mass', 0.0)
+            px_v = py_v = pz_v = None
+        elif 'px' in row and 'py' in row and 'pz' in row:
+            px_v, py_v, pz_v = row['px'], row['py'], row['pz']
+            pt_a, eta_a, phi_a = _cartesian_to_cylindrical(
+                np.array([px_v]), np.array([py_v]), np.array([pz_v]))
+            pt, eta, phi = float(pt_a[0]), float(eta_a[0]), float(phi_a[0])
+            mass = row.get('mass', 0.0)
+        else:
+            continue
+
+        pdg = int(row['pdg_id']) if 'pdg_id' in row else None
+        ptype = PDG_MAP.get(pdg, "track") if pdg is not None else "track"
+        charge = int(row['charge']) if 'charge' in row else None
+        energy = row.get('energy')
+
+        p = make_particle(ptype, pt, eta, phi, mass=mass, energy=energy,
+                          charge=charge, pdg_id=pdg, px=px_v, py=py_v, pz=pz_v)
+        events.append({
+            "event_id": i + 1, "experiment": experiment.upper(),
+            "particles": [p],
+        })
+
+    elapsed = time.perf_counter() - t0
+    return write_output(filepath, "ntuple", experiment, events, total, elapsed)
+
+
+# ──────────────────────────────────────────────────────────────────
+# Multi-Format Dispatcher
+# ──────────────────────────────────────────────────────────────────
+def process_file(filepath, chunk_size=50_000, max_events=5_000, experiment="auto"):
+    """Route a file to the appropriate parser based on extension."""
+    ext = Path(filepath).suffix.lower()
+    if filepath.lower().endswith('.lhe.gz'):
+        ext = '.lhe.gz'
+    fmt = SUPPORTED_EXTENSIONS.get(ext)
+    if fmt == 'root':
+        return process_root_file(filepath, chunk_size, max_events, experiment)
+    elif fmt == 'csv':
+        return process_csv_file(filepath, max_events, experiment)
+    elif fmt == 'tsv':
+        return process_csv_file(filepath, max_events, experiment, delimiter='\t')
+    elif fmt == 'lhe':
+        return process_lhe_file(filepath, max_events)
+    elif fmt == 'hepmc':
+        return process_hepmc_file(filepath, max_events)
+    elif fmt == 'parquet':
+        return process_parquet_file(filepath, max_events, experiment)
+    elif fmt == 'hdf5':
+        return process_hdf5_file(filepath, max_events, experiment)
+    elif fmt == 'yoda':
+        return process_yoda_file(filepath, max_events)
+    elif fmt == 'ntuple':
+        return process_ntuple_file(filepath, max_events, experiment)
+    else:
+        log.error(f"Unsupported format: {ext}")
+        sys.exit(1)
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -615,7 +1258,7 @@ def process_multiple(file_list, chunk_size, max_events, workers, experiment):
     if workers <= 1 or len(file_list) == 1:
         for fp in file_list:
             try:
-                out = process_root_file(fp, chunk_size, max_events, experiment)
+                out = process_file(fp, chunk_size, max_events, experiment)
                 results[fp] = {"status": "ok", "output": out}
             except Exception as e:
                 log.error(f"Failed: {fp} — {e}")
@@ -623,7 +1266,7 @@ def process_multiple(file_list, chunk_size, max_events, workers, experiment):
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             futures = {
-                pool.submit(process_root_file, fp, chunk_size, max_events, experiment): fp
+                pool.submit(process_file, fp, chunk_size, max_events, experiment): fp
                 for fp in file_list
             }
             for future in as_completed(futures):
@@ -648,7 +1291,7 @@ def process_multiple(file_list, chunk_size, max_events, workers, experiment):
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="opencern-processor",
-        description="OpenCERN Multi-Experiment Data Processor — ROOT → JSON",
+        description="OpenCERN Multi-Format HEP Data Processor — ROOT/CSV/LHE/HepMC/Parquet/HDF5/YODA/NTuple → JSON",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Experiments:
@@ -666,7 +1309,7 @@ Examples:
     )
     parser.add_argument(
         "files", nargs="+",
-        help="Path(s) to ROOT file(s). Supports glob patterns.",
+        help="Path(s) to data file(s). Supports ROOT, CSV, TSV, LHE, HepMC, Parquet, HDF5, YODA, NTuple.",
     )
     parser.add_argument(
         "--experiment", "-e", type=str, default="auto",
@@ -704,7 +1347,8 @@ def main():
     for pattern in args.files:
         p = os.path.expanduser(pattern)
         if os.path.isdir(p):
-            expanded.extend(glob.glob(os.path.join(p, "*.root")))
+            for ext_pattern in SUPPORTED_EXTENSIONS:
+                expanded.extend(glob.glob(os.path.join(p, f"*{ext_pattern}")))
         else:
             matched = glob.glob(p)
             if matched:
@@ -718,13 +1362,13 @@ def main():
             log.warning(f"File not found, skipping: {fp}")
 
     if not valid_files:
-        log.error("No valid ROOT files found. Exiting.")
+        log.error("No valid data files found. Exiting.")
         sys.exit(1)
 
     t_global = time.perf_counter()
 
     if len(valid_files) == 1:
-        process_root_file(valid_files[0], args.chunk_size, args.max_events, args.experiment)
+        process_file(valid_files[0], args.chunk_size, args.max_events, args.experiment)
     else:
         process_multiple(valid_files, args.chunk_size, args.max_events, args.workers, args.experiment)
 

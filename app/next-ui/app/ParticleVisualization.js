@@ -35,6 +35,9 @@ export default function ParticleVisualization({ filename }) {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
   const totalEvents = 5000;
+  const [sourceFormat, setSourceFormat] = useState('');
+  const [experiment, setExperiment] = useState('');
+  const [synthetic, setSynthetic] = useState(false);
 
   // Guard: only mount DeckGL once the container has real pixel dimensions
   // so that luma.gl can obtain a valid WebGL2 context and query device limits.
@@ -98,6 +101,15 @@ export default function ParticleVisualization({ filename }) {
         if (data.eof) {
           setLoading(false);
           setEvents(loadedEvents);
+          // Fetch metadata for format badge
+          fetch(`http://127.0.0.1:9002/process/data?filename=${encodeURIComponent(filename)}&page=1&limit=1`)
+            .then(r => r.json())
+            .then(meta => {
+              setSourceFormat(meta.metadata?.format || '');
+              setExperiment(meta.metadata?.experiment || '');
+              setSynthetic(meta.metadata?.synthetic || false);
+            })
+            .catch(() => {});
           ws.close();
         } else if (data.error) {
           console.error("Stream error:", data.error);
@@ -576,6 +588,20 @@ export default function ParticleVisualization({ filename }) {
       {/* Stats Overlay - Top Right */}
       {!loading && stats && (
         <div style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(8, 11, 20, 0.88)', border: '1px solid #1e2d45', borderRadius: '6px', padding: '16px 20px', width: '220px', zIndex: 5, fontFamily: 'var(--font-geist-mono), monospace' }}>
+          {/* Format / Experiment Badge */}
+          {(sourceFormat || experiment) && (
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              {sourceFormat && sourceFormat !== 'json' && (
+                <span style={{ background: '#1e2d45', color: '#00d4ff', fontSize: '9px', padding: '2px 6px', borderRadius: '3px', textTransform: 'uppercase', fontWeight: 600 }}>{sourceFormat}</span>
+              )}
+              {experiment && (
+                <span style={{ background: '#1e2d45', color: '#a7c080', fontSize: '9px', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>{experiment}</span>
+              )}
+              {synthetic && (
+                <span style={{ background: 'rgba(255, 200, 0, 0.15)', color: '#ffc800', fontSize: '9px', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>SYNTHETIC</span>
+              )}
+            </div>
+          )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
              <span style={{ color: '#4a6080', fontSize: '10px', fontWeight: 600 }}>EVENT</span>
              <span style={{ color: '#e2eaf7', fontSize: '10px' }}>{stats.index}</span>

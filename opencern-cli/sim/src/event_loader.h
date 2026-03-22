@@ -37,9 +37,17 @@ public:
     // Find event with highest HT
     size_t maxHtIndex() const;
 
+    // Metadata from JSON
+    const std::string& sourceFormat() const { return sourceFormat_; }
+    const std::string& sourceExperiment() const { return sourceExperiment_; }
+    bool isSynthetic() const { return synthetic_; }
+
 private:
     std::vector<Event> events_;
     std::string filename_;
+    std::string sourceFormat_;
+    std::string sourceExperiment_;
+    bool synthetic_ = false;
 };
 
 } // namespace ocern

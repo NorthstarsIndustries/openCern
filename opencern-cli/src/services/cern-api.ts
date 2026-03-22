@@ -54,7 +54,7 @@ export interface LocalFile {
   name: string;
   path: string;
   size: number;
-  type: 'root' | 'json' | 'other';
+  type: 'root' | 'json' | 'csv' | 'tsv' | 'lhe' | 'hepmc' | 'parquet' | 'hdf5' | 'yoda' | 'ntuple' | 'other';
   modified: string;
 }
 

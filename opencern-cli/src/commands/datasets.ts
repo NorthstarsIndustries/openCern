@@ -27,7 +27,9 @@ export function listLocalDatasets(): LocalDataset[] {
         const fullPath = join(dataDir, item.name);
         const stat = statSync(fullPath);
         const ext = extname(item.name).toLowerCase();
-        if (['.root', '.json', '.csv'].includes(ext)) {
+        if (['.root', '.json', '.csv', '.tsv', '.lhe',
+             '.hepmc', '.hepmc2', '.hepmc3', '.parquet',
+             '.hdf5', '.h5', '.yoda', '.dat', '.txt'].includes(ext)) {
           const ds: LocalDataset = {
             name: item.name,
             path: fullPath,

@@ -26,7 +26,11 @@ export type LogsRoute = {
   type: "logs"
 }
 
-export type Route = HomeRoute | SessionRoute | DockerRoute | QuantumRoute | DatasetsRoute | LogsRoute
+export type SetupRoute = {
+  type: "setup"
+}
+
+export type Route = HomeRoute | SessionRoute | DockerRoute | QuantumRoute | DatasetsRoute | LogsRoute | SetupRoute
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",

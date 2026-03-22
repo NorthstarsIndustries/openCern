@@ -29,9 +29,15 @@ function openBrowser(url: string): void {
   } catch { /* ignore */ }
 }
 
+export interface LoginOpts {
+  pollIntervalMs?: number;
+  maxPollAttempts?: number;
+}
+
 export async function login(
   onCode: (code: string, url: string) => void,
-  onWaiting: () => void
+  onWaiting: () => void,
+  opts?: LoginOpts,
 ): Promise<LoginResult> {
   let initResult: { code: string; expiresAt: string };
   try {
@@ -51,10 +57,14 @@ export async function login(
   onCode(code, authUrl);
   onWaiting();
 
+  const pollInterval = opts?.pollIntervalMs ?? 2000;
+  const maxAttempts = opts?.maxPollAttempts ?? Infinity;
   const deadline = Date.now() + 5 * 60 * 1000;
+  let attempts = 0;
 
-  while (Date.now() < deadline) {
-    await new Promise(r => setTimeout(r, 2000));
+  while (Date.now() < deadline && attempts < maxAttempts) {
+    await new Promise(r => setTimeout(r, pollInterval));
+    attempts++;
     try {
       const res = await (await getAxios()).get(`${CLI_AUTH_BASE}/auth/cli/poll`, {
         params: { code },

@@ -65,6 +65,28 @@ const commands: CommandDef[] = [
   { name: '/viz', description: 'Launch visualization', usage: '/viz <file>', category: 'analysis' },
   { name: '/sim', description: 'Launch OpenGL collision viewer', usage: '/sim <file>', category: 'analysis' },
 
+  // ── Physics ─────────────────────────────────────────────
+  { name: '/invariant-mass', description: 'Compute invariant mass from particle pairs', usage: '/invariant-mass <file> [--p1=muon --p2=muon]', category: 'analysis' },
+  { name: '/transverse-mass', description: 'Compute transverse mass (W boson candidates)', usage: '/transverse-mass <file> [--lepton=muon]', category: 'analysis' },
+  { name: '/rapidity', description: 'Calculate rapidity distribution', usage: '/rapidity <file> [--type=muon]', category: 'analysis' },
+  { name: '/pseudorapidity', description: 'Calculate pseudorapidity distribution', usage: '/pseudorapidity <file> [--type=muon]', category: 'analysis' },
+  { name: '/delta-r', description: 'Compute deltaR between particle pairs', usage: '/delta-r <file> [--type1=muon --type2=jet]', category: 'analysis' },
+  { name: '/cross-section', description: 'Estimate cross-section from event counts', usage: '/cross-section <file> [--luminosity=1.0 --efficiency=1.0]', category: 'analysis' },
+  { name: '/luminosity', description: 'Show integrated luminosity info', usage: '/luminosity <file>', category: 'analysis' },
+  { name: '/efficiency', description: 'Compute selection efficiency', usage: '/efficiency <file> --pt=>20 --eta=<2.5', category: 'analysis' },
+  { name: '/cutflow', description: 'Sequential cut analysis with event counts', usage: '/cutflow <file> pt>20 eta<2.5', category: 'analysis' },
+  { name: '/significance', description: 'Estimate signal significance', usage: '/significance <file> --signal=80-100 --background=60-80,100-120', category: 'analysis' },
+  { name: '/spectrum', description: 'Energy/momentum spectrum analysis', usage: '/spectrum <file> [--field=energy]', category: 'analysis' },
+  { name: '/decay', description: 'Identify decay patterns in events', usage: '/decay <file>', category: 'analysis' },
+  { name: '/isolation', description: 'Compute isolation cones for leptons', usage: '/isolation <file> [--lepton=muon --cone=0.4]', category: 'analysis' },
+  { name: '/missing-et', description: 'Calculate missing transverse energy', usage: '/missing-et <file>', category: 'analysis' },
+  { name: '/jet-cluster', description: 'Simple jet clustering (anti-kT approx)', usage: '/jet-cluster <file> [--R=0.4]', category: 'analysis' },
+  { name: '/trigger', description: 'Simulate trigger selections', usage: '/trigger <file> [--trigger=single-muon]', category: 'analysis' },
+  { name: '/pileup', description: 'Estimate pileup conditions', usage: '/pileup <file>', category: 'analysis' },
+  { name: '/angular', description: 'Angular distribution analysis', usage: '/angular <file> [--type=muon]', category: 'analysis' },
+  { name: '/asymmetry', description: 'Forward-backward asymmetry', usage: '/asymmetry <file> [--field=eta]', category: 'analysis' },
+  { name: '/resonance', description: 'Scan for resonance peaks', usage: '/resonance <file> [--field=mass]', category: 'analysis' },
+
   // ── AI & Models ──────────────────────────────────────────
   { name: '/ask', description: 'AI analysis with tool execution', usage: '/ask [question]', category: 'ai' },
   { name: '/opask', description: 'Open file + AI analysis', usage: '/opask <file>', category: 'ai' },
@@ -109,6 +131,8 @@ const commands: CommandDef[] = [
   { name: '/clear', aliases: ['clear'], description: 'Clear the screen', usage: '/clear', category: 'system', shortcut: 'Ctrl+L' },
   { name: '/help', aliases: ['help'], description: 'Show help', usage: '/help', category: 'system' },
   { name: '/exit', aliases: ['exit', 'quit'], description: 'Exit', usage: '/exit', category: 'system', shortcut: 'Ctrl+D' },
+  { name: '/setup', description: 'Run first-start setup wizard', usage: '/setup', category: 'system' },
+  { name: '/firststart', description: 'Run first-start setup wizard', usage: '/firststart', category: 'system' },
 ];
 
 export const registry = {

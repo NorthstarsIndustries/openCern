@@ -11,6 +11,7 @@ import { Docker } from "./views/docker.js"
 import { Quantum, type QuantumJob } from "./views/quantum.js"
 import { Datasets, type DatasetInfo } from "./views/datasets.js"
 import { Logs, type ActivityEntry } from "./views/logs.js"
+import { Setup } from "./views/setup.js"
 import { Dialog } from "./components/dialog.js"
 import { SelectList, type ListItem } from "./components/list.js"
 import { useDocker } from "./hooks/use-docker.js"
@@ -20,6 +21,7 @@ import { config } from "../utils/config.js"
 import { anthropicService, type AgenticEvent, type ToolCall, type ToolResult } from "../services/anthropic.js"
 import { docker } from "../services/docker.js"
 import { registry } from "../commands/registry.js"
+import { dispatch, isTuiHandled } from "../commands/dispatcher.js"
 import { add as addHistory } from "../utils/history.js"
 import { isAuthenticated } from "../utils/auth.js"
 import { getHelpText } from "../commands/help.js"
@@ -104,6 +106,11 @@ function App() {
   // Startup
   createEffect(() => {
     config.load()
+    // Auto-navigate to setup on first run
+    if (config.isFirstRun()) {
+      route.navigate({ type: "setup" })
+      return
+    }
     if (config.get("autoStartDocker")) {
       docker.isDockerRunning().then(running => {
         if (running) docker.startContainers().catch(() => {})
@@ -127,6 +134,8 @@ function App() {
 
     if (evt.name === "tab" && !showCommandPalette() && !showThemeDialog()) {
       const views: Array<"home" | "session" | "docker" | "quantum" | "datasets" | "logs"> = ["home", "session", "docker", "quantum", "datasets", "logs"]
+      // Don't cycle away from setup view
+      if (route.data.type === "setup") { evt.preventDefault(); return }
       const currentIdx = views.indexOf(route.data.type as any)
       const next = views[(currentIdx + 1) % views.length]
       route.navigate({ type: next })
@@ -198,14 +207,35 @@ function App() {
           return
         }
         default: {
-          // Try to find command in registry
+          // Commands that need TUI-level handling (AI queries)
+          if (cmd === "/ask" || cmd === "/opask") {
+            const query = input.slice(cmd.length).trim() || input.slice(1)
+            await runAgenticQuery(query)
+            return
+          }
+
+          // Try dispatcher for all registered commands
           const found = registry.find(cmd)
           if (found) {
             session.addActivity({ type: "command", message: input })
-            session.addMessage({ role: "system", content: `Running ${cmd}...` })
-            route.navigate({ type: "session" })
+            try {
+              const result = await dispatch(input)
+              if (result.output === "__CLEAR__") {
+                session.clearMessages()
+              } else if (result.output) {
+                session.addMessage({ role: "system", content: result.output })
+              }
+              if (result.navigateTo) {
+                route.navigate({ type: result.navigateTo as any })
+              } else {
+                route.navigate({ type: "session" })
+              }
+            } catch (e) {
+              session.addMessage({ role: "system", content: `Error: ${(e as Error).message}` })
+              route.navigate({ type: "session" })
+            }
           } else {
-            // Delegate to AI
+            // Delegate unknown input to AI
             await runAgenticQuery(input.slice(1))
           }
           return
@@ -355,6 +385,9 @@ function App() {
           </Match>
           <Match when={route.data.type === "logs"}>
             <Logs entries={session.activity()} />
+          </Match>
+          <Match when={route.data.type === "setup"}>
+            <Setup />
           </Match>
         </Switch>
 

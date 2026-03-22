@@ -50,11 +50,11 @@ describe('auth E2E flow', () => {
 
     const onCode = vi.fn();
     const onWaiting = vi.fn();
-    const loginPromise = login(onCode, onWaiting);
+    const loginPromise = login(onCode, onWaiting, { pollIntervalMs: 1, maxPollAttempts: 5 });
 
-    await flushAsync(0);
-    await flushAsync(2500);
-    await flushAsync(0);
+    for (let i = 0; i < 10; i++) {
+      await vi.advanceTimersByTimeAsync(10);
+    }
 
     const result = await loginPromise;
 
@@ -93,17 +93,16 @@ describe('auth E2E flow', () => {
 
     vi.mocked(axios.get).mockResolvedValue({ data: { status: 'pending' } } as any);
 
-    const loginPromise = login(vi.fn(), vi.fn());
+    const loginPromise = login(vi.fn(), vi.fn(), { pollIntervalMs: 1, maxPollAttempts: 3 });
 
-    // Advance in chunks to let dynamic import microtasks settle between poll cycles
-    for (let i = 0; i < 160; i++) {
-      await flushAsync(2500);
+    for (let i = 0; i < 20; i++) {
+      await vi.advanceTimersByTimeAsync(10);
     }
 
     const result = await loginPromise;
     expect(result.success).toBe(false);
     expect(result.error).toContain('timed out');
-  }, 15000);
+  });
 
   it('should handle logout when no token exists', async () => {
     vi.mocked(getKey).mockReturnValue(null);
