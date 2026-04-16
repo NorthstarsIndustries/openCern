@@ -10,7 +10,7 @@
     "postinstall": "cp -r node_modules/monaco-editor/min/vs public/vs 2>/dev/null || true"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.38.1",
+    "@clerk/nextjs": "^6.39.2",
     "@deck.gl/core": "^9.2.9",
     "@deck.gl/layers": "^9.2.9",
     "@deck.gl/react": "^9.2.9",
