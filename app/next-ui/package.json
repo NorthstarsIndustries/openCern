@@ -15,7 +15,7 @@
     "@deck.gl/layers": "^9.2.9",
     "@deck.gl/react": "^9.2.9",
     "@monaco-editor/react": "^4.7.0",
-    "axios": "^1.13.5",
+    "axios": "^1.15.0",
     "convex": "^1.32.0",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",
