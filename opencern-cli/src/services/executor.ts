@@ -222,7 +222,38 @@ export async function executeBash(command: string, timeout = 30000): Promise<Exe
 }
 
 export async function executeOpenCERN(args: string, timeout = 30000): Promise<ExecutionResult> {
-  return executeBash(`node ${join(process.cwd(), 'bin/opencern.js')} ${args}`, timeout);
+  const start = Date.now();
+  const cliPath = join(process.cwd(), 'bin/opencern.js');
+  // Pass args as an array so neither cliPath nor user-supplied args are
+  // interpreted by a shell. Whitespace-split mirrors typical CLI usage;
+  // quoting of individual args is not supported on purpose.
+  const argv = args.trim().length ? args.trim().split(/\s+/) : [];
+
+  try {
+    const result = spawnSync(process.execPath, [cliPath, ...argv], {
+      timeout,
+      encoding: 'utf-8',
+      cwd: config.get('dataDir'),
+      env: { ...process.env, PATH: process.env.PATH },
+      maxBuffer: 2 * 1024 * 1024,
+    });
+
+    return {
+      success: result.status === 0,
+      stdout: (result.stdout || '').slice(0, 10000),
+      stderr: (result.stderr || '').slice(0, 5000),
+      exitCode: result.status ?? 1,
+      duration: Date.now() - start,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      stdout: '',
+      stderr: (err as Error).message,
+      exitCode: 1,
+      duration: Date.now() - start,
+    };
+  }
 }
 
 export async function execute(request: ExecutionRequest): Promise<ExecutionResult> {
