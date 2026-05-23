@@ -8,10 +8,11 @@ import json
 import logging
 import subprocess
 import glob
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, Request, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from config import DATA_DIR, PROCESSED_DIR
+from utils.safe_path import safe_join_or_none
 
 log = logging.getLogger("opencern.processing")
 router = APIRouter()
@@ -32,7 +33,11 @@ class ProcessRequest(BaseModel):
 
 def run_processor(filepath: str, track_key: str, experiment: str = "auto"):
     """Run the appropriate processor based on file format."""
-    full_path = os.path.join(DATA_DIR, filepath)
+    full_path = safe_join_or_none(DATA_DIR, filepath)
+    if full_path is None:
+        process_status[track_key] = "error"
+        log.error(f"Refusing processor for unsafe path: {filepath}")
+        return
     ext = os.path.splitext(full_path)[1].lower()
     log.info(f"Running processor for {track_key} (experiment={experiment}, format={ext})")
 
@@ -76,7 +81,11 @@ def run_folder_processor(folder_name: str, experiment: str = "auto"):
     Each file is processed individually, then results are merged into
     a single {folder_name}.json with combined events sorted by HT.
     """
-    folder_path = os.path.join(DATA_DIR, folder_name)
+    folder_path = safe_join_or_none(DATA_DIR, folder_name)
+    if folder_path is None:
+        process_status[folder_name] = "error"
+        log.error(f"Refusing folder processor for unsafe path: {folder_name}")
+        return
     data_files = []
     for pattern in SUPPORTED_DATA_GLOBS:
         data_files.extend(glob.glob(os.path.join(folder_path, pattern)))
@@ -119,9 +128,9 @@ def run_folder_processor(folder_name: str, experiment: str = "auto"):
             if result.returncode == 0:
                 # Read the individual output JSON
                 stem = os.path.splitext(basename)[0]
-                output_json = os.path.join(PROCESSED_DIR, f"{stem}.json")
+                output_json = safe_join_or_none(PROCESSED_DIR, f"{stem}.json")
 
-                if os.path.exists(output_json):
+                if output_json and os.path.exists(output_json):
                     with open(output_json, "r") as f:
                         data = json.load(f)
 
@@ -187,7 +196,11 @@ def run_folder_processor(folder_name: str, experiment: str = "auto"):
     }
 
     # Write merged output
-    merged_path = os.path.join(PROCESSED_DIR, f"{folder_name}.json")
+    merged_path = safe_join_or_none(PROCESSED_DIR, f"{folder_name}.json")
+    if merged_path is None:
+        process_status[folder_name] = "error"
+        log.error(f"Refusing merged write for unsafe folder name: {folder_name}")
+        return
     with open(merged_path, "w") as f:
         json.dump(merged_output, f, separators=(",", ":"))
 
@@ -203,17 +216,24 @@ def run_folder_processor(folder_name: str, experiment: str = "auto"):
 async def process_file(filename: str, background_tasks: BackgroundTasks,
                        experiment: str = "auto"):
     """Process a single file with optional experiment override."""
-    filepath = os.path.join(DATA_DIR, filename)
+    filepath = safe_join_or_none(DATA_DIR, filename)
+    if filepath is None:
+        raise HTTPException(status_code=400, detail="Invalid filename")
     if not os.path.exists(filepath):
         # Try to find the file by basename in any subfolder
         basename = os.path.basename(filename)
+        found = None
         for root, dirs, files in os.walk(DATA_DIR):
             if basename in files:
-                filepath = os.path.join(root, basename)
-                filename = os.path.relpath(filepath, DATA_DIR)
-                break
-        else:
-            return {"error": f"File not found: {filename}"}
+                rel = os.path.relpath(os.path.join(root, basename), DATA_DIR)
+                candidate = safe_join_or_none(DATA_DIR, rel)
+                if candidate is not None:
+                    found = candidate
+                    filename = rel
+                    break
+        if found is None:
+            raise HTTPException(status_code=404, detail="File not found")
+        filepath = found
 
     process_status[filename] = "processing"
     background_tasks.add_task(run_processor, filename, filename, experiment)
@@ -225,7 +245,10 @@ async def process_batch(req: ProcessRequest, background_tasks: BackgroundTasks):
     """Process multiple selected files with experiment auto-detection or override."""
     results = []
     for rel_path in req.files:
-        full_path = os.path.join(DATA_DIR, rel_path)
+        full_path = safe_join_or_none(DATA_DIR, rel_path)
+        if full_path is None:
+            results.append({"file": rel_path, "error": "Invalid path"})
+            continue
         if not os.path.exists(full_path):
             results.append({"file": rel_path, "error": "File not found"})
             continue
@@ -249,16 +272,16 @@ async def process_folder(folder: str, background_tasks: BackgroundTasks,
     This is the enterprise-level handler for ATLAS zip archives and
     other multi-file datasets.
     """
-    folder_path = os.path.join(DATA_DIR, folder)
-    if not os.path.isdir(folder_path):
-        return {"error": f"Folder not found: {folder}"}
+    folder_path = safe_join_or_none(DATA_DIR, folder)
+    if folder_path is None or not os.path.isdir(folder_path):
+        raise HTTPException(status_code=404, detail="Folder not found")
 
     data_files = []
     for pattern in SUPPORTED_DATA_GLOBS:
         data_files.extend(glob.glob(os.path.join(folder_path, pattern)))
     data_files = sorted(set(data_files))
     if not data_files:
-        return {"error": f"No data files in {folder}"}
+        raise HTTPException(status_code=404, detail="No data files in folder")
 
     process_status[folder] = f"processing 0/{len(data_files)}"
     background_tasks.add_task(run_folder_processor, folder, experiment)
@@ -275,13 +298,13 @@ async def process_folder(folder: str, background_tasks: BackgroundTasks,
 async def get_process_status(filename: str):
     stem = os.path.splitext(filename)[0]
     # Check both the original filename and the stem
-    output_file = os.path.join(PROCESSED_DIR, f"{stem}.json")
-    if os.path.exists(output_file):
+    output_file = safe_join_or_none(PROCESSED_DIR, f"{stem}.json")
+    if output_file and os.path.exists(output_file):
         return {"status": "processed"}
     # Check for folder/filename pattern
     basename = os.path.basename(stem)
-    alt_output = os.path.join(PROCESSED_DIR, f"{basename}.json")
-    if os.path.exists(alt_output):
+    alt_output = safe_join_or_none(PROCESSED_DIR, f"{basename}.json")
+    if alt_output and os.path.exists(alt_output):
         return {"status": "processed"}
     status = process_status.get(filename, "idle")
     return {"status": status}
@@ -291,7 +314,9 @@ async def get_process_status(filename: str):
 async def save_processed_data(filename: str, request: Request):
     data = await request.json()
     stem = os.path.splitext(filename)[0]
-    output_file = os.path.join(PROCESSED_DIR, f"{stem}.json")
+    output_file = safe_join_or_none(PROCESSED_DIR, f"{stem}.json")
+    if output_file is None:
+        raise HTTPException(status_code=400, detail="Invalid filename")
     with open(output_file, "w") as f:
         json.dump(data, f, separators=(",", ":"))
     return {"status": "saved"}
@@ -300,9 +325,11 @@ async def save_processed_data(filename: str, request: Request):
 @router.delete("/process/data/{filename}")
 async def delete_processed_data(filename: str):
     stem = os.path.splitext(filename)[0]
-    output_file = os.path.join(PROCESSED_DIR, f"{stem}.json")
+    output_file = safe_join_or_none(PROCESSED_DIR, f"{stem}.json")
+    if output_file is None:
+        raise HTTPException(status_code=400, detail="Invalid filename")
     if os.path.exists(output_file):
         os.remove(output_file)
         return {"message": f"{stem}.json deleted"}
-    return {"error": "File not found"}
+    raise HTTPException(status_code=404, detail="File not found")
 

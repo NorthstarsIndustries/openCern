@@ -6,12 +6,13 @@ import os
 import re
 import logging
 import httpx
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from typing import List
 from models import DownloadStatus
 from services.downloader import download_status, cancelled_downloads, download_file_async
 from config import DATA_DIR
+from utils.safe_path import safe_join_or_none
 
 log = logging.getLogger("opencern.downloads")
 router = APIRouter()
@@ -48,7 +49,9 @@ async def start_download(file_url: str, filename: str, background_tasks: Backgro
 async def start_multi_download(req: MultiDownloadRequest, background_tasks: BackgroundTasks):
     """Download selected files from a multi-file dataset into a named folder."""
     folder_name = slugify(req.dataset_title)
-    folder_path = os.path.join(DATA_DIR, folder_name)
+    folder_path = safe_join_or_none(DATA_DIR, folder_name)
+    if folder_path is None:
+        raise HTTPException(status_code=400, detail="Invalid dataset title")
     os.makedirs(folder_path, exist_ok=True)
 
     results = []
@@ -80,12 +83,13 @@ async def start_xrootd_download(uri: str, filename: str):
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
-                f"http://opencern-xrootd:8081/fetch?uri={uri}&filename={filename}"
+                "http://opencern-xrootd:8081/fetch",
+                params={"uri": uri, "filename": filename},
             )
             return resp.json()
-    except Exception as e:
-        log.error(f"XRootD proxy failed: {e}")
-        return {"error": f"XRootD proxy unavailable: {str(e)}"}
+    except Exception:
+        log.exception("XRootD proxy fetch failed")
+        return {"error": "XRootD proxy unavailable"}
 
 
 @router.get("/download/xrootd/status")
@@ -93,11 +97,13 @@ async def xrootd_download_status(filename: str):
     try:
         async with httpx.AsyncClient(timeout=5) as client:
             resp = await client.get(
-                f"http://opencern-xrootd:8081/status?filename={filename}"
+                "http://opencern-xrootd:8081/status",
+                params={"filename": filename},
             )
             return resp.json()
-    except Exception as e:
-        return {"error": f"XRootD proxy unavailable: {str(e)}"}
+    except Exception:
+        log.exception("XRootD proxy status failed")
+        return {"error": "XRootD proxy unavailable"}
 
 
 # ──────────────────────────────────────────────────────────────────

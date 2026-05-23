@@ -5,8 +5,10 @@ Lists files with nested folder support for multi-file datasets.
 import os
 import logging
 import shutil
-from fastapi import APIRouter
+import subprocess
+from fastapi import APIRouter, HTTPException
 from config import DATA_DIR
+from utils.safe_path import safe_join_or_none
 
 log = logging.getLogger("opencern.files")
 router = APIRouter()
@@ -64,43 +66,45 @@ async def list_files():
 @router.get("/files/{folder:path}")
 async def list_folder_files(folder: str):
     """List files inside a specific dataset folder."""
-    folder_path = os.path.join(DATA_DIR, folder)
-    if not os.path.isdir(folder_path):
-        return {"error": "Folder not found"}
+    folder_path = safe_join_or_none(DATA_DIR, folder)
+    if folder_path is None or not os.path.isdir(folder_path):
+        raise HTTPException(status_code=404, detail="Folder not found")
 
     files = []
     for entry in sorted(os.listdir(folder_path)):
         if entry.startswith("."):
             continue
-        fp = os.path.join(folder_path, entry)
-        if os.path.isfile(fp):
-            files.append({
-                "filename": f"{folder}/{entry}",
-                "basename": entry,
-                "size": os.path.getsize(fp),
-                "folder": folder,
-            })
+        fp = safe_join_or_none(folder_path, entry)
+        if fp is None or not os.path.isfile(fp):
+            continue
+        files.append({
+            "filename": f"{folder}/{entry}",
+            "basename": entry,
+            "size": os.path.getsize(fp),
+            "folder": folder,
+        })
     return files
 
 
 @router.delete("/files/{filepath:path}")
 async def delete_file(filepath: str):
     """Delete a file or entire dataset folder."""
-    full_path = os.path.join(DATA_DIR, filepath)
+    full_path = safe_join_or_none(DATA_DIR, filepath)
+    if full_path is None:
+        raise HTTPException(status_code=400, detail="Invalid path")
     if os.path.isdir(full_path):
         shutil.rmtree(full_path)
         return {"message": f"Folder {filepath} deleted"}
     elif os.path.isfile(full_path):
         os.remove(full_path)
         return {"message": f"{filepath} deleted"}
-    return {"error": "File not found"}
+    raise HTTPException(status_code=404, detail="File not found")
 
 
 @router.get("/files/{filename}/reveal")
 async def reveal_file(filename: str):
-    file_path = os.path.join(DATA_DIR, filename)
-    if os.path.exists(file_path):
-        import subprocess
-        subprocess.run(["open", "-R", file_path])
-        return {"message": f"{filename} revealed"}
-    return {"error": "File not found"}
+    file_path = safe_join_or_none(DATA_DIR, filename)
+    if file_path is None or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    subprocess.run(["open", "-R", file_path], check=False)
+    return {"message": f"{filename} revealed"}
