@@ -14,7 +14,7 @@
     "svix": "^1.85.0"
   },
   "devDependencies": {
-    "vitest": "^3.1.1",
+    "vitest": "^4.1.0",
     "typescript": "^5.5.0"
   }
 }
